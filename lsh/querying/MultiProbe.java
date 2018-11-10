@@ -20,6 +20,8 @@ public class MultiProbe {
 		this.randomNumberGenerator = randomNumberGenerator;
 		this.randomPerturbations = new ArrayList<Double>(this.numberOfHashFunctions);
 		generateRandomPerturbations();
+		this.expectedValueNextSlotDistanceSquared = new ArrayList<Double>(this.numberOfHashFunctions);
+		this.expectedValuePreviousSlotDistanceSquared = new ArrayList<Double>(this.numberOfHashFunctions);
 		findExpectedDistancesToAdjoiningSlots();
 	}
 	

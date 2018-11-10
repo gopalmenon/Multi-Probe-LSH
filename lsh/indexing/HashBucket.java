@@ -47,12 +47,10 @@ public class HashBucket {
 					}
 				}
 				return true;
-			} else {
-				return false;
-			}
-		} else {
-			return false;
+			} 
 		}
+		
+		return false;
 		
 	}
 	

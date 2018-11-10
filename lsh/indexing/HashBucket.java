@@ -1,5 +1,6 @@
 package lsh.indexing;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -40,8 +41,8 @@ public class HashBucket {
 		if (other instanceof HashBucket) {
 			HashBucket otherHashBucket = (HashBucket) other;
 			if (this.objectHashBucket.size() == otherHashBucket.objectHashBucket.size()) {
-				for (int slotCounter = 0; slotCounter < this.objectHashBucket.size(); ++ slotCounter) {
-					if (this.objectHashBucket.get(slotCounter).intValue() != otherHashBucket.objectHashBucket.get(slotCounter).intValue()) {
+				for (int hashFunctionCounter = 0; hashFunctionCounter < this.objectHashBucket.size(); ++ hashFunctionCounter) {
+					if (this.objectHashBucket.get(hashFunctionCounter).intValue() != otherHashBucket.objectHashBucket.get(hashFunctionCounter).intValue()) {
 						return false;
 					}
 				}
@@ -61,6 +62,24 @@ public class HashBucket {
 	@Override
 	public int hashCode() {
 		return this.hashCode;
+	}
+	
+	/**
+	 * @param perturbation
+	 * @return a neighboring bucket after applying a perturbation
+	 */
+	public HashBucket getNeighboringBucket(List<Integer> perturbation) {
+		
+		assert this.objectHashBucket.size() == perturbation.size() :
+			"Purturbation vector should have the same dimensions";
+		
+		List<Integer> neighboringBucket = new ArrayList<Integer>(this.objectHashBucket.size());
+		for (int hashFunctionCounter = 0; hashFunctionCounter < this.objectHashBucket.size(); ++ hashFunctionCounter) {
+			this.objectHashBucket.set(hashFunctionCounter, Integer.valueOf(this.objectHashBucket.get(hashFunctionCounter).intValue() + perturbation.get(hashFunctionCounter).intValue()));
+		}
+		
+		return new HashBucket(neighboringBucket);
+		
 	}
 
 }

@@ -17,7 +17,7 @@ public class HashFunction {
 	public HashFunction(int numberOfDimensions, double slotWidthW, Random randomNumberGenerator) {
 		
 		this.numberOfDimensions = numberOfDimensions;
-		this.hashFunctionCoefficients = new ArrayList<Double>(numberOfDimensions + 1);
+		this.hashFunctionCoefficients = new ArrayList<Double>(numberOfDimensions);
 		
 		for (int dimensionCounter = 0; dimensionCounter < numberOfDimensions; ++dimensionCounter) {
 			this.hashFunctionCoefficients.add(Double.valueOf(randomNumberGenerator.nextGaussian()));
@@ -34,7 +34,7 @@ public class HashFunction {
 	 */
 	public int getSlotNumber(List<Double> objectFeatures) {
 		
-		assert objectFeatures.size() == this.hashFunctionCoefficients.size() - 1 : 
+		assert objectFeatures.size() == this.hashFunctionCoefficients.size() : 
 			"Size mismatch between object to be hashed and hash function";
 		
 		double innerProduct = 0.0;

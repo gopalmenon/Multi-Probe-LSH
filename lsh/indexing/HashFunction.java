@@ -20,7 +20,7 @@ public class HashFunction {
 		this.hashFunctionCoefficients = new ArrayList<Double>(numberOfDimensions + 1);
 		
 		for (int dimensionCounter = 0; dimensionCounter < numberOfDimensions; ++dimensionCounter) {
-			this.hashFunctionCoefficients.add(randomNumberGenerator.nextGaussian());
+			this.hashFunctionCoefficients.add(Double.valueOf(randomNumberGenerator.nextGaussian()));
 		}
 		
 		this.offset = randomNumberGenerator.nextDouble() * slotWidthW;

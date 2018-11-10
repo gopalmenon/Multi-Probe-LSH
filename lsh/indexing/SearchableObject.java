@@ -23,4 +23,25 @@ public class SearchableObject {
 		return objectFile;
 	}
 	
+	/**
+	 * @param other
+	 * @return square of euclidian distance to another object. 
+	 * Used for brute force similar search.
+	 */
+	public double distanceTo(SearchableObject other) {
+		
+		double featureCount = this.objectFeatures.size();
+		assert featureCount == other.objectFeatures.size() :
+			"Both objects should have same dimensions to compute distance";
+		
+		double distanceToOther = 0.0;
+		
+		for (int featureCounter = 0; featureCounter < featureCount; ++featureCounter) {
+			distanceToOther += Math.pow(this.objectFeatures.get(featureCounter) - other.objectFeatures.get(featureCounter), 2.0);
+		}
+		
+		return distanceToOther;
+		
+	}
+	
 }

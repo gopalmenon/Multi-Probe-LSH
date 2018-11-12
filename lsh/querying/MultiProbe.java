@@ -2,6 +2,7 @@ package lsh.querying;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Random;
@@ -11,15 +12,15 @@ public class MultiProbe {
 	private int numberOfHashFunctions;
 	private double slotWidth;
 	Random randomNumberGenerator;
-	List<Double> randomDistancesToNextSlot;
-	List <Double> expectedValueNextSlotDistanceSquared;
-	List <Double> expectedValuePreviousSlotDistanceSquared;
+	private List<distanceToNextSlot> randomDistancesToNextSlot, sortedRandomDistancesToNextSlot;
+	private List <Double> expectedValueNextSlotDistanceSquared;
+	private List <Double> expectedValuePreviousSlotDistanceSquared;
 	
 	public MultiProbe(int numberOfHashFunctions, double slotWidth, Random randomNumberGenerator) {
 		this.numberOfHashFunctions = numberOfHashFunctions;
 		this.slotWidth = slotWidth;
 		this.randomNumberGenerator = randomNumberGenerator;
-		this.randomDistancesToNextSlot = new ArrayList<Double>(this.numberOfHashFunctions);
+		this.randomDistancesToNextSlot = new ArrayList<distanceToNextSlot>(this.numberOfHashFunctions);
 		generateRandomDistancesToNextSlot();
 		this.expectedValueNextSlotDistanceSquared = new ArrayList<Double>(this.numberOfHashFunctions);
 		this.expectedValuePreviousSlotDistanceSquared = new ArrayList<Double>(this.numberOfHashFunctions);
@@ -33,8 +34,11 @@ public class MultiProbe {
 		
 		double halfSlotWidth = this.slotWidth/2.0;
 		for (int hashFunctionCounter = 0; hashFunctionCounter < this.numberOfHashFunctions; ++hashFunctionCounter) {
-			this.randomDistancesToNextSlot.add(Double.valueOf(this.randomNumberGenerator.nextDouble() * halfSlotWidth));
+			this.randomDistancesToNextSlot.add(new distanceToNextSlot(this.randomNumberGenerator.nextDouble() * halfSlotWidth, hashFunctionCounter));
 		}
+		
+		this.sortedRandomDistancesToNextSlot = new ArrayList<distanceToNextSlot>(this.randomDistancesToNextSlot);
+		Collections.sort(this.sortedRandomDistancesToNextSlot);
 
 	}
 	
@@ -58,7 +62,22 @@ public class MultiProbe {
 	}
 	
 	private double getPerturbationScore(List<Integer> perturbedVector) {
-		return 0.0;
+		
+		double perturbationScore = 0.0;
+		int perturbedComponent = 0;
+		
+		for (int vectorComponentIndex = 0; vectorComponentIndex < perturbedVector.size(); ++vectorComponentIndex) {
+			
+			perturbedComponent = perturbedVector.get(vectorComponentIndex);
+			if (perturbedComponent >= 0 && perturbedComponent < this.numberOfHashFunctions) {
+				perturbationScore += this.randomDistancesToNextSlot.get(this.sortedRandomDistancesToNextSlot.get(perturbedComponent).getHashFunctionNumber()).getDistance();
+			} if (perturbedComponent >= this.numberOfHashFunctions && perturbedComponent < 2 * this.numberOfHashFunctions) {
+				perturbationScore += this.slotWidth - this.randomDistancesToNextSlot.get(this.sortedRandomDistancesToNextSlot.get(2 * this.numberOfHashFunctions - perturbedComponent).getHashFunctionNumber()).getDistance();
+			}
+
+		}
+		
+		return perturbationScore;
 	}
 	
 	private boolean isValidPerturbation(Perturbation candidatePerturbation) {
@@ -97,4 +116,28 @@ public class MultiProbe {
 		return randomPerturbations;
 	}
 
+	private class distanceToNextSlot implements Comparable<distanceToNextSlot> {
+		
+		private double distance;
+		private int hashFunctionNumber;
+		
+		public distanceToNextSlot(double distance, int hashFunctionNumber) {
+			this.distance = distance;
+			this.hashFunctionNumber = hashFunctionNumber;
+		}
+
+		@Override
+		public int compareTo(distanceToNextSlot other) {
+			return Double.valueOf(this.distance).compareTo(Double.valueOf(other.distance));
+		}
+
+		public double getDistance() {
+			return distance;
+		}
+
+		public int getHashFunctionNumber() {
+			return hashFunctionNumber;
+		}
+		
+	}
 }

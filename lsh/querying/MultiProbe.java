@@ -13,18 +13,14 @@ public class MultiProbe {
 	private double slotWidth;
 	Random randomNumberGenerator;
 	private List<distanceToNextSlot> randomDistancesToNextSlot, sortedRandomDistancesToNextSlot;
-	private List <Double> expectedValueNextSlotDistanceSquared;
-	private List <Double> expectedValuePreviousSlotDistanceSquared;
+	private List<Perturbation> randomPerturbations;
 	
-	public MultiProbe(int numberOfHashFunctions, double slotWidth, Random randomNumberGenerator) {
+	public MultiProbe(int numberOfHashFunctions, double slotWidth, int numberOfPerturbations, Random randomNumberGenerator) {
 		this.numberOfHashFunctions = numberOfHashFunctions;
 		this.slotWidth = slotWidth;
 		this.randomNumberGenerator = randomNumberGenerator;
-		this.randomDistancesToNextSlot = new ArrayList<distanceToNextSlot>(this.numberOfHashFunctions);
 		generateRandomDistancesToNextSlot();
-		this.expectedValueNextSlotDistanceSquared = new ArrayList<Double>(this.numberOfHashFunctions);
-		this.expectedValuePreviousSlotDistanceSquared = new ArrayList<Double>(this.numberOfHashFunctions);
-		findExpectedDistancesToAdjoiningSlots();
+		generateRandomPerturbations(numberOfPerturbations);
 	}
 	
 	/**
@@ -32,6 +28,7 @@ public class MultiProbe {
 	 */
 	private void generateRandomDistancesToNextSlot() {
 		
+		this.randomDistancesToNextSlot = new ArrayList<distanceToNextSlot>(this.numberOfHashFunctions);
 		double halfSlotWidth = this.slotWidth/2.0;
 		for (int hashFunctionCounter = 0; hashFunctionCounter < this.numberOfHashFunctions; ++hashFunctionCounter) {
 			this.randomDistancesToNextSlot.add(new distanceToNextSlot(this.randomNumberGenerator.nextDouble() * halfSlotWidth, hashFunctionCounter));
@@ -42,23 +39,8 @@ public class MultiProbe {
 
 	}
 	
-	/**
-	 * Find sorted distances to next and previous slots
-	 */
-	private void findExpectedDistancesToAdjoiningSlots() {
-		
-		double computedValue = 0.0;
-		for (int hashFunctionCounter = 0; hashFunctionCounter < this.numberOfHashFunctions; ++hashFunctionCounter) {
-			
-			computedValue = (hashFunctionCounter * (hashFunctionCounter + 1) * slotWidth * slotWidth) / (4.0 * (numberOfHashFunctions + 1) * (numberOfHashFunctions +2));
-			expectedValueNextSlotDistanceSquared.add(Double.valueOf(computedValue));
-			computedValue = slotWidth * slotWidth * (1.0 - 
-					((2.0 * numberOfHashFunctions + 1.0 - hashFunctionCounter) / (numberOfHashFunctions + 1.0)) + 
-					(((2.0 * numberOfHashFunctions + 1.0 - hashFunctionCounter) * (2.0 * numberOfHashFunctions + 2.0 - hashFunctionCounter)) / (4.0 * (numberOfHashFunctions + 1.0) * (numberOfHashFunctions + 2.0))));
-			expectedValuePreviousSlotDistanceSquared.add(Double.valueOf(computedValue));
-		}
-		
-		
+	private int getIndexForDistanceToPreviousSlot(int indexForDistanceToNextSlot) {
+		return 2 * this.numberOfHashFunctions - 1 - indexForDistanceToNextSlot;
 	}
 	
 	private double getPerturbationScore(List<Integer> perturbedVector) {
@@ -72,7 +54,7 @@ public class MultiProbe {
 			if (perturbedComponent >= 0 && perturbedComponent < this.numberOfHashFunctions) {
 				perturbationScore += this.randomDistancesToNextSlot.get(this.sortedRandomDistancesToNextSlot.get(perturbedComponent).getHashFunctionNumber()).getDistance();
 			} if (perturbedComponent >= this.numberOfHashFunctions && perturbedComponent < 2 * this.numberOfHashFunctions) {
-				perturbationScore += this.slotWidth - this.randomDistancesToNextSlot.get(this.sortedRandomDistancesToNextSlot.get(2 * this.numberOfHashFunctions - perturbedComponent).getHashFunctionNumber()).getDistance();
+				perturbationScore += this.slotWidth - this.randomDistancesToNextSlot.get(this.sortedRandomDistancesToNextSlot.get(getIndexForDistanceToPreviousSlot(perturbedComponent)).getHashFunctionNumber()).getDistance();
 			}
 
 		}
@@ -81,18 +63,65 @@ public class MultiProbe {
 	}
 	
 	private boolean isValidPerturbation(Perturbation candidatePerturbation) {
+		
+		int indexForDistanceToPreviousSlot = 0, perturbationComponent = 0;
+		List<Integer> candidatePerturbationVector = candidatePerturbation.getPerturbedVector();
+		for (int perturbationComponentIndex = 0; perturbationComponentIndex < candidatePerturbationVector.size(); ++perturbationComponentIndex) {
+			perturbationComponent = candidatePerturbationVector.get(perturbationComponentIndex);
+			if (perturbationComponent < this.numberOfHashFunctions) {
+				indexForDistanceToPreviousSlot = getIndexForDistanceToPreviousSlot(perturbationComponent);
+				for (int otherPerturbationComponentIndex = 0; otherPerturbationComponentIndex < candidatePerturbationVector.size(); ++otherPerturbationComponentIndex) {
+					if (indexForDistanceToPreviousSlot == candidatePerturbationVector.get(otherPerturbationComponentIndex)) {
+						return false;
+					}
+				}
+			}
+		}
 		return true;
 	}
 	
+	private int getMaximumPerturbationComponent(Perturbation inputPerturbation) {
+		
+		List<Integer> inputPerturbationVector = inputPerturbation.getPerturbedVector();
+		int maximumPerturbation = Integer.MIN_VALUE, maximumPerturbationIndex = 0;
+		for (int perturbationComponentIndex = 0; perturbationComponentIndex < inputPerturbationVector.size(); ++perturbationComponentIndex) {
+			if (inputPerturbationVector.get(perturbationComponentIndex) > maximumPerturbation) {
+				maximumPerturbation = inputPerturbationVector.get(perturbationComponentIndex);
+				maximumPerturbationIndex = perturbationComponentIndex;
+			}
+		}
+
+		return maximumPerturbationIndex;
+		
+	}
+	
 	private Perturbation shiftPerturbation(Perturbation inputPerturbation) {
-		return null;
+		
+		int maximumPerturbationIndex = getMaximumPerturbationComponent(inputPerturbation);
+		List<Integer> inputPerturbationVector = inputPerturbation.getPerturbedVector();
+		List<Integer> newPerturbationVector = new ArrayList<Integer>(inputPerturbationVector);
+		newPerturbationVector.set(maximumPerturbationIndex, Integer.valueOf(inputPerturbationVector.get(maximumPerturbationIndex).intValue() + 1));
+		return new Perturbation(newPerturbationVector, getPerturbationScore(inputPerturbationVector));
+		
 	}
 	
 	private Perturbation expandPerturbation(Perturbation inputPerturbation) {
-		return null;
+		
+		int maximumPerturbationIndex = getMaximumPerturbationComponent(inputPerturbation);
+		List<Integer> inputPerturbationVector = inputPerturbation.getPerturbedVector();
+		List<Integer> newPerturbationVector = new ArrayList<Integer>(inputPerturbationVector);
+		newPerturbationVector.add(Integer.valueOf(inputPerturbationVector.get(maximumPerturbationIndex).intValue() + 1));
+		return new Perturbation(newPerturbationVector, getPerturbationScore(inputPerturbationVector));
+		
 	}
 	
-	public List<Perturbation> getRandomPerturbations(int numberOfPerturbations) {
+	public List<Perturbation> getRandomPerturbations() {
+		
+		return Collections.unmodifiableList(this.randomPerturbations);
+		
+	}
+	
+	private void generateRandomPerturbations(int numberOfPerturbations) {
 		
 		PriorityQueue<Perturbation> perturbations = new PriorityQueue<Perturbation>();
 		List<Perturbation> randomPerturbations = new ArrayList<Perturbation>(numberOfPerturbations);
@@ -113,7 +142,7 @@ public class MultiProbe {
 			randomPerturbations.add(candidatePerturbation);
 		}
 		
-		return randomPerturbations;
+		this.randomPerturbations = randomPerturbations;
 	}
 
 	private class distanceToNextSlot implements Comparable<distanceToNextSlot> {

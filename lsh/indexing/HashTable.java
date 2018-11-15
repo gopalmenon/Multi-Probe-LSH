@@ -1,5 +1,6 @@
 package lsh.indexing;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -7,8 +8,12 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-public class HashTable {
+public class HashTable implements Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 2L;
 	private List<HashFunction> hashFunctionTable;
 	private int numberOfHashFunctions;
 	private Map<HashBucket, SearchableObject> objectIndex;

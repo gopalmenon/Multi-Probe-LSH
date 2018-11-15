@@ -1,5 +1,6 @@
 package lsh.indexing;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -8,8 +9,12 @@ import java.util.Random;
  * This will simulate a hash function which consists of a vector and an offset
  *
  */
-public class HashFunction {
+public class HashFunction implements Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 3L;
 	private int numberOfDimensions;
 	private List<Double> hashFunctionCoefficients;
 	private double offset, slotWidthW;

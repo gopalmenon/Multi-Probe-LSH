@@ -1,17 +1,22 @@
 package lsh.indexing;
 
-import java.io.File;
+import java.io.Serializable;
+import java.net.URL;
 import java.util.Collections;
 import java.util.List;
 
-public class SearchableObject {
+public class SearchableObject implements Serializable {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 5L;
 	private List<Double> objectFeatures;
-	private final File objectFile;
+	private final URL objectUrl;
 	
-	public SearchableObject(List<Double> objectFeatures, File objectFile) {
+	public SearchableObject(List<Double> objectFeatures, URL objectUrl) {
 		this.objectFeatures = objectFeatures;
-		this.objectFile = objectFile;
+		this.objectUrl = objectUrl;
 	}
 	
 
@@ -19,8 +24,8 @@ public class SearchableObject {
 		return Collections.unmodifiableList(objectFeatures);
 	}
 
-	public File getObjectFile() {
-		return objectFile;
+	public URL getObjectUrl() {
+		return objectUrl;
 	}
 	
 	/**

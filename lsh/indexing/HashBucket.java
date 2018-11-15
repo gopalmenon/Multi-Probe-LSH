@@ -1,5 +1,6 @@
 package lsh.indexing;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,8 +8,12 @@ import java.util.List;
  * This will identify the bucket used to store an object that has been hashed by multiple hash functions
  *
  */
-public class HashBucket {
+public class HashBucket implements Serializable {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 4L;
 	private List<Integer> objectHashBucket;
 	private int hashCode;
 	

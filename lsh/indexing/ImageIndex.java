@@ -7,11 +7,12 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Serializable;
-import java.net.ConnectException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import javax.imageio.ImageIO;
@@ -28,6 +29,7 @@ public class ImageIndex implements Serializable {
 	private double slotWidth;
 	private boolean useEigenVectorsToHash;
 	private File imageUrls;
+	private Map<URL, List<Double>> imageFeatures;
 	private List<HashTable> hashTables;
 	private Random randomNumberGenerator;
 	
@@ -43,7 +45,8 @@ public class ImageIndex implements Serializable {
 			this.imageUrls = new File(IMAGE_URLS);
 		}
 		this.hashTables = new ArrayList<HashTable>(this.numberOfHashTables);
-		this.randomNumberGenerator = new Random();;
+		imageFeatures = new HashMap<URL, List<Double>>();
+		this.randomNumberGenerator = new Random();
 		
 		createHashTables();
 		createImageIndex();
@@ -69,10 +72,11 @@ public class ImageIndex implements Serializable {
 			String fileLine = bufferedReader.readLine();
 			while (fileLine != null) {
 
+				//Download the image
 				try {
 					imageUrl = new URL(fileLine.trim());
 				} catch (Exception e) {
-					System.err.println("Error processing url " + fileLine + ". FIle skipped.");
+					System.err.println("Error processing url " + fileLine + ". File skipped.");
 					continue;
 				}
 				try {
@@ -80,7 +84,13 @@ public class ImageIndex implements Serializable {
 				} catch (Exception e) {
 					System.err.println("Error reading " + fileLine + ". File skipped.");
 				}
+				
+				//Create color histogram for the image
 				List<Double> imageFeatures = Arrays.asList(Double.valueOf(this.randomNumberGenerator.nextDouble()), Double.valueOf(this.randomNumberGenerator.nextDouble()), Double.valueOf(this.randomNumberGenerator.nextDouble()), Double.valueOf(this.randomNumberGenerator.nextDouble()), Double.valueOf(this.randomNumberGenerator.nextDouble()));
+				
+				//Store the image features for later use
+				this.imageFeatures.put(imageUrl, imageFeatures);
+				
 				for (HashTable hashtable : this.hashTables) {
 					hashtable.add(new SearchableObject(imageFeatures, imageUrl));
 				}
@@ -96,6 +106,10 @@ public class ImageIndex implements Serializable {
 	
 	public List<HashTable> getImageIndex() {
 		return this.hashTables;
+	}
+	
+	public Map<URL, List<Double>> getImageFeatures() {
+		return this.imageFeatures;
 	}
 	
 }

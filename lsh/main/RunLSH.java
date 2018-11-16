@@ -1,5 +1,6 @@
 package main;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -17,16 +18,14 @@ public class RunLSH {
 	private ImageIndex imageIndex;
 
 	public static void main(String[] parameters) {
-		
 		RunLSH runLSH = new RunLSH();
 		boolean loadIndex = false;
 		if (runLSH.indexExists()) {
 			loadIndex = true;
 		}
-			
+
 		runLSH.createImageIndex(loadIndex);
 		runLSH.processUserQueries();
-		
 	}
 	
 	private void createImageIndex(boolean loadIndex) {

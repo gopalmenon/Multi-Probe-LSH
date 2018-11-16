@@ -1,4 +1,4 @@
-package lsh.indexing;
+package indexing;
 
 import java.io.Serializable;
 import java.util.ArrayList;

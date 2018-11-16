@@ -1,4 +1,4 @@
-package lsh.indexing;
+package indexing;
 
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;

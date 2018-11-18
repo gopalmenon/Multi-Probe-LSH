@@ -32,6 +32,17 @@ public class HashFunction implements Serializable {
 		this.slotWidthW = slotWidthW;
 		
 	}
+
+	public HashFunction(int numberOfDimensions, double slotWidthW, double eigenVector[]) {
+		this.numberOfDimensions = numberOfDimensions;
+		this.hashFunctionCoefficients = new ArrayList<Double>(numberOfDimensions);
+
+		for (int i = 0; i < numberOfDimensions; i++)
+			hashFunctionCoefficients.add(eigenVector[i]);
+
+		this.offset = 0.0;
+		this.slotWidthW = slotWidthW;
+	}
 	
 	/**
 	 * @param objectFeatures

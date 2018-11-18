@@ -5,7 +5,7 @@ import java.net.URL;
 import java.util.Collections;
 import java.util.List;
 
-public class SearchableObject implements Serializable {
+public class SearchableObject implements Serializable{
 	
 	/**
 	 * 
@@ -48,5 +48,16 @@ public class SearchableObject implements Serializable {
 		return distanceToOther;
 		
 	}
-	
+
+	@Override
+	public boolean equals(java.lang.Object other)
+	{
+		if (other == this)
+			return true;
+		for (int featureCounter = 0; featureCounter < this.objectFeatures.size(); ++featureCounter){
+			if (this.getObjectFeatures().get(featureCounter).compareTo( ((SearchableObject) other).getObjectFeatures().get(featureCounter)) != 0)
+				return false;
+		}
+		return true;
+	}
 }

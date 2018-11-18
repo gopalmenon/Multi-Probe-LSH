@@ -28,5 +28,5 @@ public class Perturbation implements Comparable<Perturbation> {
 	public List<Integer> getPerturbedVector() {
 		return Collections.unmodifiableList(this.perturbedVector);
 	}
-
+	public double getPerturbationScore() { return this.perturbationScore; }
 }

@@ -28,7 +28,19 @@ public class HashTable implements Serializable {
 		this.numberOfHashFunctions = numberOfHashFunctions;
 		this.objectIndex = new HashMap<HashBucket, SearchableObject>();
 	}
-	
+
+	public HashTable(int numberOfHashFunctions, int numberOfDimensions, double slotWidthW, double[][] eigenVectors) {
+		this.hashFunctionTable = new ArrayList<HashFunction>(numberOfHashFunctions);
+
+		this.numberOfHashFunctions = numberOfHashFunctions;
+
+        for (int hashFunctionCounter = 0; hashFunctionCounter < numberOfHashFunctions; ++hashFunctionCounter) {
+            this.hashFunctionTable.add(new HashFunction(numberOfDimensions, slotWidthW, eigenVectors[hashFunctionCounter]));
+        }
+
+		this.objectIndex = new HashMap<HashBucket, SearchableObject>();
+	}
+
 	/**
 	 * @param searchableObject
 	 * @return the bucket corresponding to the object
@@ -75,9 +87,34 @@ public class HashTable implements Serializable {
 				objectsInBucket.add(entry.getValue());
 			}
 		}
-		
 		return objectsInBucket;
 		
 	}
-	
+
+	public List<SearchableObject> getObjects(List<Integer> hashcode) {
+		Set<Map.Entry<HashBucket, SearchableObject>> entrySet = this.objectIndex.entrySet();
+		HashBucket probeBucket = new HashBucket(hashcode);
+
+		List<SearchableObject> objectsInBucket = new ArrayList<SearchableObject>();
+		for (Map.Entry<HashBucket, SearchableObject> entry : entrySet) {
+			if (entry.getKey().hashCode() == probeBucket.hashCode()) {
+				objectsInBucket.add(entry.getValue());
+			}
+		}
+		return objectsInBucket;
+
+	}
+
+	public List<SearchableObject> getAllObjects()
+	{
+		List<SearchableObject> retList = new ArrayList<>();
+		for (HashBucket bucket : this.objectIndex.keySet())
+		{
+			retList.addAll(this.getObjects(bucket));
+		}
+		return retList;
+	}
+
+	public List<HashFunction> getHashFunctions() { return this.hashFunctionTable; }
+
 }

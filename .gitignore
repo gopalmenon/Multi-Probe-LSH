@@ -18,3 +18,4 @@ README.html
 *.ipr
 *.iml
 *.iws
+.idea/*

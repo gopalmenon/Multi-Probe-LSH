@@ -22,9 +22,9 @@ public class RunLSH {
 	public static final String USER_QUIT_INPUT = "Quit";
 	
 	private ImageIndex imageIndex;
-	private int NUMBER_OF_DIMENSIONS = 3;
-	private int NUMBER_OF_HASHFUNCTIONS = 3;
-	private int NUMBER_OF_HASHTABLES = 10;
+	private int NUMBER_OF_DIMENSIONS = 4;
+	private int NUMBER_OF_HASHFUNCTIONS = 4;
+	private int NUMBER_OF_HASHTABLES = 1;
 	private double SLOT_WIDTH = 0.1;
 	private boolean USE_EIGENVECTORS = true;
 	private int K = 3;

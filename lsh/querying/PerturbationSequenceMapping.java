@@ -1,5 +1,6 @@
 package lsh.querying;
 
+import lsh.indexing.HashBucket;
 import lsh.indexing.HashFunction;
 import lsh.indexing.HashTable;
 import lsh.indexing.SearchableObject;
@@ -92,9 +93,9 @@ public class PerturbationSequenceMapping {
                         hashedQuery.set(index.getIndex()/2, hashedDistances[index.getIndex() - 1].getDistance());
                 }
 
-                returnSet.addAll(hashtable.getObjects(hashedQuery));
+                //returnSet.addAll(hashtable.getObjects(hashedQuery));
                 //returnSet.addAll(hashtable.getObjects(hashtable.getHashBucket(new SearchableObject(query, null)).getNeighboringBucket(hashedQuery)));
-
+                returnSet.addAll(hashtable.getObjects(new HashBucket(hashedQuery)));
             }
 
         }

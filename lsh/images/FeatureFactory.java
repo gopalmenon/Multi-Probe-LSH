@@ -43,7 +43,7 @@ public class FeatureFactory implements Serializable {
         Histogram hist = new Histogram(60, 0, 60, 4);
         hist.countPixels(image.getRaster(), null, 0, 0, 1, 1);
         int[][] bins = hist.getBins();
-        ArrayList<Integer> histList = new ArrayList<Integer>();
+        ArrayList<Integer> histList = new ArrayList<Integer>(240);
         for(int j = 0; j < 4; j++) {
             for (int i = 0; i < 60; i++) {
                 histList.add(bins[j][i]);

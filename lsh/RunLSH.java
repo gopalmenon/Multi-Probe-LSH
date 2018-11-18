@@ -26,7 +26,7 @@ public class RunLSH {
 	private int NUMBER_OF_HASHFUNCTIONS = 4;
 	private int NUMBER_OF_HASHTABLES = 1;
 	private double SLOT_WIDTH = 0.1;
-	private boolean USE_EIGENVECTORS = true;
+	private boolean USE_EIGENVECTORS = false;
 	private int K = 3;
 
 

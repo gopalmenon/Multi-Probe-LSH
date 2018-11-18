@@ -93,9 +93,9 @@ public class PerturbationSequenceMapping {
                         hashedQuery.set(index.getIndex()/2, hashedDistances[index.getIndex() - 1].getDistance());
                 }
 
-                //returnSet.addAll(hashtable.getObjects(hashedQuery));
+                returnSet.addAll(hashtable.getObjects(hashedQuery));
                 //returnSet.addAll(hashtable.getObjects(hashtable.getHashBucket(new SearchableObject(query, null)).getNeighboringBucket(hashedQuery)));
-                returnSet.addAll(hashtable.getObjects(new HashBucket(hashedQuery)));
+                //returnSet.addAll(hashtable.getObjects(new HashBucket(hashedQuery)));
             }
 
         }

@@ -1,9 +1,5 @@
 package lsh.indexing;
 
-import org.apache.commons.math3.linear.Array2DRowRealMatrix;
-import org.apache.commons.math3.linear.EigenDecomposition;
-import org.apache.commons.math3.linear.RealMatrix;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -91,9 +87,34 @@ public class HashTable implements Serializable {
 				objectsInBucket.add(entry.getValue());
 			}
 		}
-		
 		return objectsInBucket;
 		
 	}
-	
+
+	public List<SearchableObject> getObjects(List<Integer> hashcode) {
+		Set<Map.Entry<HashBucket, SearchableObject>> entrySet = this.objectIndex.entrySet();
+		HashBucket probeBucket = new HashBucket(hashcode);
+
+		List<SearchableObject> objectsInBucket = new ArrayList<SearchableObject>();
+		for (Map.Entry<HashBucket, SearchableObject> entry : entrySet) {
+			if (entry.getKey().hashCode() == probeBucket.hashCode()) {
+				objectsInBucket.add(entry.getValue());
+			}
+		}
+		return objectsInBucket;
+
+	}
+
+	public List<SearchableObject> getAllObjects()
+	{
+		List<SearchableObject> retList = new ArrayList<>();
+		for (HashBucket bucket : this.objectIndex.keySet())
+		{
+			retList.addAll(this.getObjects(bucket));
+		}
+		return retList;
+	}
+
+	public List<HashFunction> getHashFunctions() { return this.hashFunctionTable; }
+
 }

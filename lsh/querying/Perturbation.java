@@ -3,24 +3,24 @@ package lsh.querying;
 import java.util.Collections;
 import java.util.List;
 
-public class Perturbation2 implements Comparable<Perturbation2> {
+public class Perturbation implements Comparable<Perturbation> {
 	
 	private List<Integer> perturbedVector;
 	private double perturbationScore;
 	
-	public Perturbation2(List<Integer> perturbedVector, double perturbationScore) {
+	public Perturbation(List<Integer> perturbedVector, double perturbationScore) {
 		this.perturbedVector = perturbedVector;
 		this.perturbationScore = perturbationScore;
 	}
 
 	@Override
-	public int compareTo(Perturbation2 other) {
+	public int compareTo(Perturbation other) {
 		
 		if (other == null) {
 			throw new NullPointerException();
 		}
 		
-		Perturbation2 otherPerturbation = (Perturbation2) other;
+		Perturbation otherPerturbation = (Perturbation) other;
 		return Double.compare(Double.valueOf(this.perturbationScore), Double.valueOf(otherPerturbation.perturbationScore));
 
 	}

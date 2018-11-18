@@ -7,10 +7,15 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.*;
+import java.util.Arrays;
+
 
 import lsh.indexing.ImageIndex;
 import lsh.indexing.HashTable;
 import lsh.indexing.SearchableObject;
+import lsh.querying.Perturbation;
+import lsh.querying.PerturbationSequenceMapping;
+import lsh.querying.PerturbationSequences;
 
 public class RunLSH {
 	
@@ -19,10 +24,10 @@ public class RunLSH {
 	private ImageIndex imageIndex;
 	private int NUMBER_OF_DIMENSIONS = 3;
 	private int NUMBER_OF_HASHFUNCTIONS = 3;
-	private int NUMBER_OF_HASHTABLES = 5;
+	private int NUMBER_OF_HASHTABLES = 10;
 	private double SLOT_WIDTH = 0.1;
-	private boolean USE_EIGENVECTORS = false;
-	private int K = 99;
+	private boolean USE_EIGENVECTORS = true;
+	private int K = 3;
 
 
 	public static void main(String[] parameters) {
@@ -133,8 +138,15 @@ public class RunLSH {
 		System.out.print("Enter desired vector: \n");
 		List<Double> vector = new ArrayList<Double>();
 
+//		for (int i = 0; i < this.NUMBER_OF_DIMENSIONS; i++)
+//			vector.add(Double.valueOf(scanner.nextDouble()));
+
 		for (int i = 0; i < this.NUMBER_OF_DIMENSIONS; i++)
-			vector.add(Double.valueOf(scanner.nextDouble()));
+		{
+			vector.add(Double.valueOf(0.5));
+		}
+
+		PerturbationSequences sequence = new PerturbationSequences(this.NUMBER_OF_HASHFUNCTIONS, this.SLOT_WIDTH, this.K);
 
 		//Repeat till user quits
 		while (!USER_QUIT_INPUT.equalsIgnoreCase(userInput)) {
@@ -144,21 +156,43 @@ public class RunLSH {
 			System.out.println("Found " + this.K + " nearest neighbors");
 			for (SearchableObject object : KNearestNeighbors)
 			{
-				for (Double element : object.getObjectFeatures()) {
-					System.out.printf("%f ", element.doubleValue());
-				}
-				System.out.println();
+////				for (Double element : object.getObjectFeatures()) {
+////					System.out.printf("%f ", element.doubleValue());
+////				}
+//				//System.out.println();
 				System.out.println("Distance is " + object.distanceTo(new SearchableObject(vector, null)));
 			}
 
-			//Run multi-probe and return neighboring bucket contents
-			KNearestNeighbors = getMultiProbeNearestNeighbors(vector);
+			System.out.println("\nBEGIN RUNNING MULTIPROBE\n");
 
+			//Run multi-probe and return neighboring bucket contents
+			KNearestNeighbors = getMultiProbeNearestNeighbors(vector, sequence.getPerturbations());
+
+			double distances[] = new double[KNearestNeighbors.size()];
+
+			int dist_ndx = 0;
+			for (SearchableObject object : KNearestNeighbors)
+			{
+				distances[dist_ndx] = object.distanceTo(new SearchableObject(vector, null));
+				dist_ndx++;
+			}
+
+
+
+			for (SearchableObject object : KNearestNeighbors)
+			{
+				System.out.println("Distance is " + object.distanceTo(new SearchableObject(vector, null)));
+			}
+
+			Arrays.sort(distances);
+
+			System.out.print("Sorted distances is:");
+			for (dist_ndx = 0; dist_ndx < KNearestNeighbors.size(); dist_ndx++)
+				System.out.println(distances[dist_ndx]);
 
 			System.out.print("Enter desired vector: \n");
 
 			vector = new ArrayList<>();
-			KNearestNeighbors = new ArrayList<>();
 			for (int i = 0; i < this.NUMBER_OF_DIMENSIONS; i++)
 				vector.add(Double.valueOf(scanner.nextDouble()));
 
@@ -191,9 +225,10 @@ public class RunLSH {
 		return KNearestNeighbors;
 	}
 
-	private List<SearchableObject> getMultiProbeNearestNeighbors(List<Double> vector)
+	private List<SearchableObject> getMultiProbeNearestNeighbors(List<Double> queryVector, List<Perturbation> perturbations)
 	{
-		return null;
+		PerturbationSequenceMapping runMultiProbe = new PerturbationSequenceMapping(this.NUMBER_OF_HASHFUNCTIONS, this.SLOT_WIDTH, this.K, this.NUMBER_OF_HASHTABLES, this.imageIndex.getImageIndex(), queryVector, perturbations);
+		return runMultiProbe.getQueryResults();
 	}
 
 }

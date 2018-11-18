@@ -1,81 +1,132 @@
 package lsh.querying;
 
+import lsh.indexing.HashFunction;
 import lsh.indexing.HashTable;
+import lsh.indexing.SearchableObject;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
+import java.util.Comparator;
 
 
 public class PerturbationSequenceMapping {
 
-    private PerturbationSequences sequence;
     private int numberOfHashFunctions;
     private double slotWidth;
     private int numberOfPerturbations;
     private int numberOfHashTables;
+    private List<Double> query;
     List<HashTable> hashTables;
-    Map<>
+    List<SearchableObject> returnSet;
+    List<Perturbation> perturbations;
 
-    public PerturbationSequenceMapping(int numberOfHashFunctions, double slotWidth, int numberOfPerturbations, int numberOfHashTables, List<HashTable> hashTables)
+    public PerturbationSequenceMapping(int numberOfHashFunctions, double slotWidth, int numberOfPerturbations, int numberOfHashTables, List<HashTable> hashTables, List<Double> query, List<Perturbation> perturbations)
     {
         this.numberOfHashFunctions = numberOfHashFunctions;
         this.slotWidth = slotWidth;
         this.numberOfPerturbations = numberOfPerturbations;
         this.numberOfHashTables = numberOfHashTables;
         this.hashTables = hashTables;
+        this.query = query;
+        returnSet = new ArrayList<>();
 
-        this.sequence = new PerturbationSequences(this.numberOfHashFunctions, this.slotWidth, this.numberOfPerturbations);
+        this.perturbations = perturbations;
         GenerateMapping();
 
     }
 
-    // For each hashtable, we calculate x_i(delta) where x_i(delta) is the distance to the next slot +
-    // sort these 2M (= 2 * numberofhashfunctions) values. Create a map between sorted and unsorted. Get the perturbation
-    // sequence. Use these as indices for the sorted order of x_i. Put these indices in a new vector. Return vector.
-    // Query this vector.
-
-
-    // First suppose we have one hash table
-
     public void GenerateMapping()
     {
-        for (HashTable hashtable: hashTables)
+        Comparator<distances> indexOrder =  new Comparator<distances>() {
+            public int compare(distances s1, distances s2) {
+                return s1.getIndex() - s2.getIndex();
+            }
+        };
+
+        for (HashTable hashtable : hashTables)
         {
+            distances hashedDistances[] = new distances[2 *this.numberOfHashFunctions];
+            HashFunction hashes[] = new HashFunction[this.numberOfHashFunctions];
+            List<Integer> hashedQuery = new ArrayList<>();
+            int i = 0;
+            for (HashFunction hashfunction: hashtable.getHashFunctions())
+            {
+                hashedQuery.add(hashfunction.getSlotNumber(this.query));
+                hashes[i] = hashfunction;
+                i++;
+            }
+
+            int hash_ndx = 0;
+            for (int j = 0; j < 2 * this.numberOfHashFunctions; j += 2)
+            {
+                hashedDistances[j] = new distances(hashes[hash_ndx].getSlotNumber(this.query) - 1, j + 1);
+                hashedDistances[j + 1] = new distances(hashes[hash_ndx].getSlotNumber(this.query) + 1, j + 2);
+                hash_ndx++;
+            }
+
+            // Construct sorted array
+            distances sortedDistances[] = new distances[2 * this.numberOfHashFunctions];
+            for (i = 0; i < 2 * this.numberOfHashFunctions; i++)
+                sortedDistances[i] = hashedDistances[i];
+
+            Arrays.sort(sortedDistances);
+
+            for (Perturbation perturbation : this.perturbations)
+            {
+                List<Integer> indices = perturbation.getPerturbedVector();
+                distances temp_vec[] = new distances[indices.size()];
+
+                for (i = 0; i < indices.size(); i++)
+                {
+                    temp_vec[i] = (sortedDistances[indices.get(i) - 1]);
+                }
+                Arrays.sort(temp_vec, indexOrder);
+
+                for (distances index: temp_vec)
+                {
+                    if (index.getIndex() % 2 == 0) {
+                        hashedQuery.set(index.getIndex()/2 - 1, hashedDistances[index.getIndex() - 1].getDistance());
+                    }
+                    else
+                        hashedQuery.set(index.getIndex()/2, hashedDistances[index.getIndex() - 1].getDistance());
+                }
+
+                returnSet.addAll(hashtable.getObjects(hashedQuery));
+                //returnSet.addAll(hashtable.getObjects(hashtable.getHashBucket(new SearchableObject(query, null)).getNeighboringBucket(hashedQuery)));
+
+            }
 
         }
     }
 
+    public List<SearchableObject> getQueryResults()
+    {
+        return this.returnSet;
+    }
 
 
+    private class distances implements Comparable<distances> {
 
+        private int distance;
+        private int index;
 
-
-
-
-
-
-
-
-    private class distanceToNextSlot implements Comparable<distanceToNextSlot> {
-
-        private double distance;
-        private int hashFunctionNumber;
-
-        public distanceToNextSlot(double distance, int hashFunctionNumber) {
+        public distances(int distance, int index) {
             this.distance = distance;
-            this.hashFunctionNumber = hashFunctionNumber;
+            this.index = index;
         }
 
         @Override
-        public int compareTo(distanceToNextSlot other) {
+        public int compareTo(distances other) {
             return Double.valueOf(this.distance).compareTo(Double.valueOf(other.distance));
         }
 
-        public double getDistance() {
-            return distance;
+        public int getDistance() {
+            return this.distance;
         }
 
-        public int getHashFunctionNumber() {
-            return hashFunctionNumber;
+        public int getIndex() {
+            return this.index;
         }
 
     }

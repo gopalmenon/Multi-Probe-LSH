@@ -1,0 +1,3 @@
+[submodule "image_data"]
+	path = image_data
+	url = https://github.com/illegalnumbers/multi-probe-lsh-data.git

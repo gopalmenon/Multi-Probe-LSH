@@ -1,4 +1,4 @@
-package lsh.querying;
+package querying;
 
 import java.util.ArrayList;
 import java.util.Arrays;

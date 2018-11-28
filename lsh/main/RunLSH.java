@@ -135,11 +135,8 @@ public class RunLSH {
 		String userInput = "";
 		Scanner scanner = new Scanner(System.in);
 
-		System.out.print("Enter desired vector: \n");
+		System.out.print("Running with vector v = (0.5, ..., 0.5): \n");
 		List<Double> vector = new ArrayList<Double>();
-
-//		for (int i = 0; i < this.NUMBER_OF_DIMENSIONS; i++)
-//			vector.add(Double.valueOf(scanner.nextDouble()));
 
 		for (int i = 0; i < this.NUMBER_OF_DIMENSIONS; i++)
 		{
@@ -148,55 +145,43 @@ public class RunLSH {
 
 		PerturbationSequences sequence = new PerturbationSequences(this.NUMBER_OF_HASHFUNCTIONS, this.SLOT_WIDTH, this.K);
 
-		//Repeat till user quits
-		while (!USER_QUIT_INPUT.equalsIgnoreCase(userInput)) {
-
-			//Query hash tables and return exact matches
-			List<SearchableObject> KNearestNeighbors = getExactKNearestNeighbors(vector);
-			System.out.println("Found " + this.K + " nearest neighbors");
-			for (SearchableObject object : KNearestNeighbors)
-			{
+		//Query hash tables and return exact matches
+		List<SearchableObject> KNearestNeighbors = getExactKNearestNeighbors(vector);
+		System.out.println("Found " + this.K + " nearest neighbors");
+		for (SearchableObject object : KNearestNeighbors)
+		{
 ////				for (Double element : object.getObjectFeatures()) {
 ////					System.out.printf("%f ", element.doubleValue());
 ////				}
 //				//System.out.println();
-				System.out.println("Distance is " + object.distanceTo(new SearchableObject(vector, null)));
-			}
-
-			System.out.println("\nBEGIN RUNNING MULTIPROBE\n");
-
-			//Run multi-probe and return neighboring bucket contents
-			KNearestNeighbors = getMultiProbeNearestNeighbors(vector, sequence.getPerturbations());
-
-			double distances[] = new double[KNearestNeighbors.size()];
-
-			int dist_ndx = 0;
-			for (SearchableObject object : KNearestNeighbors)
-			{
-				distances[dist_ndx] = object.distanceTo(new SearchableObject(vector, null));
-				dist_ndx++;
-			}
-
-
-
-			for (SearchableObject object : KNearestNeighbors)
-			{
-				System.out.println("Distance is " + object.distanceTo(new SearchableObject(vector, null)));
-			}
-
-			Arrays.sort(distances);
-
-			System.out.print("Sorted distances is:");
-			for (dist_ndx = 0; dist_ndx < KNearestNeighbors.size(); dist_ndx++)
-				System.out.println(distances[dist_ndx]);
-
-			System.out.print("Enter desired vector: \n");
-
-			vector = new ArrayList<>();
-			for (int i = 0; i < this.NUMBER_OF_DIMENSIONS; i++)
-				vector.add(Double.valueOf(scanner.nextDouble()));
-
+			System.out.println("Distance is " + object.distanceTo(new SearchableObject(vector, null)));
 		}
+
+		System.out.println("\nBEGIN RUNNING MULTIPROBE\n");
+
+		//Run multi-probe and return neighboring bucket contents
+		KNearestNeighbors = getMultiProbeNearestNeighbors(vector, sequence.getPerturbations());
+
+		double distances[] = new double[KNearestNeighbors.size()];
+
+		int dist_ndx = 0;
+		for (SearchableObject object : KNearestNeighbors)
+		{
+			distances[dist_ndx] = object.distanceTo(new SearchableObject(vector, null));
+			dist_ndx++;
+		}
+
+
+		for (SearchableObject object : KNearestNeighbors)
+		{
+			System.out.println("Distance is " + object.distanceTo(new SearchableObject(vector, null)));
+		}
+
+		Arrays.sort(distances);
+
+		System.out.print("Sorted distances is:");
+		for (dist_ndx = 0; dist_ndx < KNearestNeighbors.size(); dist_ndx++)
+			System.out.println(distances[dist_ndx]);
 
 	}
 

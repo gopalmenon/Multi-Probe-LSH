@@ -29,6 +29,7 @@ public class ImageIndex implements Serializable {
 	private boolean useEigenVectorsToHash;
 	private File imageUrls;
 	private Map<URL, List<Double>> imageFeatures;
+	private List<SearchableObject> rawFeatureVectors;
 	private List<HashTable> hashTables;
 	private Random randomNumberGenerator;
 	private boolean secondPass;
@@ -45,38 +46,28 @@ public class ImageIndex implements Serializable {
 			this.imageUrls = new File(IMAGE_URLS);
 		}
 		this.hashTables = new ArrayList<HashTable>(this.numberOfHashTables);
-		imageFeatures = new HashMap<URL, List<Double>>();
+		this.imageFeatures = new HashMap<URL, List<Double>>();
+		this.rawFeatureVectors = new ArrayList<>();
 		this.randomNumberGenerator = new Random();
 		this.secondPass = false;
 
 		// If we are using eigenvectors, we must sweep through the data once, find the eigenvalues,
 		// then make a second pass to begin hashing.
-		if (!test) {
-			if (useEigenVectorsToHash) {
-				createHashTables(createImageIndex());
-				this.secondPass = true;
-				createImageIndex();
-			} else {
-				this.secondPass = true;
-				createHashTables(null);
-				createImageIndex();
-			}
-		}
+
+		if (test)
+			createTestImageIndex();
 		else
-		{
-			if (useEigenVectorsToHash) {
-				createHashTables(createTestImageIndex());
-				this.secondPass = true;
-				createTestImageIndex();
-			} else {
-				this.secondPass = true;
-				createHashTables(null);
-				createTestImageIndex();
-			}
-		}
+			createImageIndex();
+		createHashTables();
+		for (HashTable hashtable: this.hashTables)
+			for (SearchableObject object: this.rawFeatureVectors)
+				hashtable.add(object);
+
+		int x = 3;
+		int y = x + 3;
 	}
 	
-	private void createHashTables(List<SearchableObject> featureVectors) {
+	private void createHashTables() {
 		if (!useEigenVectorsToHash) {
 			for (int hashTableCounter = 0; hashTableCounter < this.numberOfHashTables; ++hashTableCounter) {
 				this.hashTables.add(new HashTable(this.numberOfHashFunctions, this.numberOfImageFeatures, this.slotWidth, this.randomNumberGenerator));
@@ -84,15 +75,15 @@ public class ImageIndex implements Serializable {
 		}
 		else {
 			// Begin construction of matrix M
-			double M[][] = new double[featureVectors.size()][this.numberOfImageFeatures];
+			double M[][] = new double[this.rawFeatureVectors.size()][this.numberOfImageFeatures];
 
-			for (int point_ndx = 0; point_ndx < featureVectors.size(); point_ndx++) {
+			for (int point_ndx = 0; point_ndx < this.rawFeatureVectors.size(); point_ndx++) {
 				// Set rows of M to be featurevectors
 				double featureVector[] = new double[this.numberOfImageFeatures];
 
 				// Perhaps there is a better way to do this?
 				for (int i = 0; i < this.numberOfImageFeatures; i++)
-					featureVector[i] = featureVectors.get(point_ndx).getObjectFeatures().get(i);
+					featureVector[i] = this.rawFeatureVectors.get(point_ndx).getObjectFeatures().get(i);
 
 				M[point_ndx] = featureVector;
 			}
@@ -103,24 +94,8 @@ public class ImageIndex implements Serializable {
 			EigenDecomposition VDV = new EigenDecomposition(MtM);
 			RealMatrix V = VDV.getV();
 
-			// Construct random indexing array
-			int numEigenVectors = this.numberOfImageFeatures;
-			int eigenVectorIndex[] = new int[numEigenVectors];
-			for (int i = 0; i < numEigenVectors; i++)
-				eigenVectorIndex[i] = i;
-
-			// Code from https://stackoverflow.com/questions/1519736/random-shuffling-of-an-array
-			for (int i = eigenVectorIndex.length - 1; i > 0; i--)
-			{
-				int index = this.randomNumberGenerator.nextInt(i + 1);
-				// Simple swap
-				int a = eigenVectorIndex[index];
-				eigenVectorIndex[index] = eigenVectorIndex[i];
-				eigenVectorIndex[i] = a;
-			}
-
 			int ML = this.numberOfHashFunctions * this.numberOfHashTables;
-			double eigenvectors[][] = new double[this.numberOfHashFunctions][Math.max(this.numberOfImageFeatures, ML)];
+			double eigenvectors[][] = new double[Math.max(this.numberOfImageFeatures, ML)][this.numberOfImageFeatures];
 
 			// We have two cases to consider. 1) More eigenvectors (or dimension) than M*L and less eigenvectors than M*L
 			if (ML <= this.numberOfImageFeatures)
@@ -136,8 +111,8 @@ public class ImageIndex implements Serializable {
 				{
 					int a = randomNumberGenerator.nextInt(this.numberOfImageFeatures);
 					int b = randomNumberGenerator.nextInt(this.numberOfImageFeatures);
-					double c1 = randomNumberGenerator.nextDouble();
-					double c2 = randomNumberGenerator.nextDouble();
+					double c1 = randomNumberGenerator.nextGaussian();
+					double c2 = randomNumberGenerator.nextGaussian();
 
 					double linearCombination[] = new double[this.numberOfImageFeatures];
 
@@ -149,17 +124,28 @@ public class ImageIndex implements Serializable {
 				}
 			}
 
+			// Code from https://stackoverflow.com/questions/1519736/random-shuffling-of-an-array
+			// Shuffle eigenvectors to remove heavy weight on one hashtable
+			for (int i = eigenvectors.length - 1; i > 0; i--)
+			{
+				int index = this.randomNumberGenerator.nextInt(i + 1);
+				// Simple swap
+				double a[] = eigenvectors[index];
+				eigenvectors[index] = eigenvectors[i];
+				eigenvectors[i] = a;
+			}
+
 			int eig_ndx = 0;
 			for (int i = 0; i < this.numberOfHashTables; i++){
 				double vectors[][] = new double[this.numberOfHashFunctions][this.numberOfImageFeatures];
 
 				for (int j = 0; j < this.numberOfHashFunctions; j++)
 				{
-					vectors[eig_ndx] = eigenvectors[eig_ndx];
+					vectors[j] = eigenvectors[eig_ndx];
 					eig_ndx++;
 				}
 
-				this.hashTables.add(new HashTable(this.numberOfHashFunctions, this.numberOfImageFeatures, this.slotWidth, vectors));
+				this.hashTables.add(new HashTable(this.numberOfHashFunctions, this.numberOfImageFeatures, this.slotWidth, vectors, randomNumberGenerator));
 			}
 		}
 	}
@@ -167,10 +153,8 @@ public class ImageIndex implements Serializable {
 	/**
 	 * Read image urls, extract image features and put the image in its bucket
 	 */
-	private List<SearchableObject> createImageIndex() {
-		
+	private void createImageIndex() {
 		URL imageUrl = null;
-		List<SearchableObject> featureVectors = new ArrayList<SearchableObject>();
 
 		try {
 			BufferedReader bufferedReader = new BufferedReader(new FileReader(this.imageUrls));
@@ -195,16 +179,8 @@ public class ImageIndex implements Serializable {
 				
 				//Store the image features for later use
 				this.imageFeatures.put(imageUrl, imageFeatures);
-				
-				if (secondPass) {
-					for (HashTable hashtable : this.hashTables) {
-						hashtable.add(new SearchableObject(imageFeatures, imageUrl));
-					}
-				}
-				else {
-					featureVectors.add(new SearchableObject(imageFeatures, imageUrl));
+				this.rawFeatureVectors.add(new SearchableObject(imageFeatures, imageUrl));
 
-				}
 				fileLine = bufferedReader.readLine();
 			}
 			bufferedReader.close();
@@ -213,19 +189,16 @@ public class ImageIndex implements Serializable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return featureVectors;
 	}
 
 	/**
 	 * Similar method for testing with simple data
 	 */
-	private List<SearchableObject> createTestImageIndex() {
-		List<SearchableObject> featureVectors = new ArrayList<SearchableObject>();
-
-
+//	private List<SearchableObject> createTestImageIndex() {
+	private void createTestImageIndex() {
 		File file = new File("lsh/test/test_data.txt");
-		// Construct BufferedReader from FileReader
 
+		// Construct BufferedReader from FileReader
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(file));
 
@@ -237,29 +210,18 @@ public class ImageIndex implements Serializable {
 				for (int i = 0; i < this.numberOfImageFeatures; i++) {
 					vector.add(Double.parseDouble(elements[i]));
 				}
-				featureVectors.add(new SearchableObject(vector, null));
-				if (secondPass) {
-                    for (HashTable hashtable : this.hashTables) {
-                        hashtable.add(new SearchableObject(vector, null));
-                    }
-                }
+				this.rawFeatureVectors.add(new SearchableObject(vector, null));
 			}
             br.close();
         } catch(IOException e) {
 			System.out.println("Error reading data.");
 		}
-
-		return featureVectors;
-
 	}
 
 	
-	public List<HashTable> getImageIndex() {
-		return this.hashTables;
-	}
+	public List<HashTable> getImageIndex() { return this.hashTables; }
 	
-	public Map<URL, List<Double>> getImageFeatures() {
-		return this.imageFeatures;
-	}
-	
+	public Map<URL, List<Double>> getImageFeatures() {	return this.imageFeatures; }
+
+	public List<SearchableObject> getRawFeatureVectors() {return this.rawFeatureVectors; }
 }

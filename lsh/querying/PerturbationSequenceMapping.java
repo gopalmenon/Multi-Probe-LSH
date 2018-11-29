@@ -58,6 +58,7 @@ public class PerturbationSequenceMapping {
                 i++;
             }
 
+            // Add search result of original query.
             returnSet.addAll(hashtable.getObjects(new HashBucket(hashedQuery)));
 
             int hash_ndx = 0;
@@ -94,12 +95,6 @@ public class PerturbationSequenceMapping {
                     else
                         hashedQuery.set(index.getIndex()/2, hashedDistances[index.getIndex() - 1].getDistance());
                 }
-
-                //returnSet.addAll(hashtable.getObjects(hashedQuery));
-                //returnSet.addAll(hashtable.getObjects(hashtable.getHashBucket(new SearchableObject(query, null)).getNeighboringBucket(hashedQuery)));
-
-
-
                 returnSet.addAll(hashtable.getObjects(new HashBucket(hashedQuery)));
             }
 

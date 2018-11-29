@@ -22,10 +22,10 @@ public class RunLSH {
 	public static final String USER_QUIT_INPUT = "Quit";
 	
 	private ImageIndex imageIndex;
-	private int NUMBER_OF_DIMENSIONS = 8;
-	private int NUMBER_OF_HASHFUNCTIONS = 8;
-	private int NUMBER_OF_HASHTABLES = 1;
-	private double SLOT_WIDTH = 0.0001;
+	private int NUMBER_OF_DIMENSIONS = 120;
+	private int NUMBER_OF_HASHFUNCTIONS = 10;
+	private int NUMBER_OF_HASHTABLES = 10;
+	private double SLOT_WIDTH = 15.0;
 	private boolean USE_EIGENVECTORS = false;
 	private int K = 3;
 
@@ -131,21 +131,25 @@ public class RunLSH {
 	}
 
 	private void processUserTestQueries() {
-
-		String userInput = "";
-		Scanner scanner = new Scanner(System.in);
-
 		System.out.print("Running with vector v = (0.5, ..., 0.5): \n");
+
+		// Make testing vector v = (0.5, ..., 0.5)
 		List<Double> vector = new ArrayList<Double>();
-
 		for (int i = 0; i < this.NUMBER_OF_DIMENSIONS; i++)
-		{
 			vector.add(Double.valueOf(0.5));
-		}
 
+		// Find absolute K - Nearest Neighbors using raw data before hashing
+		System.out.println("Begin finding raw K nearest neighbors");
+		List<SearchableObject> KRawNearestNeighbors = getRawKNeaerestNeighbors(vector);
+		System.out.println("Found " + this.K + " nearest neighbors");
+		for (SearchableObject object : KRawNearestNeighbors)
+			System.out.println("Distance is " + object.distanceTo(new SearchableObject(vector, null)));
+
+		// Get perturbation vectors to use in query
 		PerturbationSequences sequence = new PerturbationSequences(this.NUMBER_OF_HASHFUNCTIONS, this.SLOT_WIDTH, this.K);
 
-		//Query hash tables and return exact matches
+		//Query hash tables and return exact matches after hashing. Note this should return the same as
+		// using the raw data.
 		List<SearchableObject> KNearestNeighbors = getExactKNearestNeighbors(vector);
 		System.out.println("Found " + this.K + " nearest neighbors");
 		for (SearchableObject object : KNearestNeighbors)
@@ -157,13 +161,14 @@ public class RunLSH {
 			System.out.println("Distance is " + object.distanceTo(new SearchableObject(vector, null)));
 		}
 
+		// Now use multiprobe
 		System.out.println("\nBEGIN RUNNING MULTIPROBE\n");
 
 		//Run multi-probe and return neighboring bucket contents
 		KNearestNeighbors = getMultiProbeNearestNeighbors(vector, sequence.getPerturbations());
 
+		// Construct primitive array for sorting
 		double distances[] = new double[KNearestNeighbors.size()];
-
 		int dist_ndx = 0;
 		for (SearchableObject object : KNearestNeighbors)
 		{
@@ -171,28 +176,24 @@ public class RunLSH {
 			dist_ndx++;
 		}
 
+//		for (SearchableObject object : KNearestNeighbors)
+//		{
+//			System.out.println("Distance is " + object.distanceTo(new SearchableObject(vector, null)));
+//		}
 
-		for (SearchableObject object : KNearestNeighbors)
-		{
-			System.out.println("Distance is " + object.distanceTo(new SearchableObject(vector, null)));
-		}
-
+		// Sort and print results
 		Arrays.sort(distances);
 
-<<<<<<< HEAD
 		System.out.println("Sorted K distances is:");
-=======
-		System.out.print("Sorted distances is:");
->>>>>>> b658e2c34cb1632795a46c394e38a539451b97a9
-		for (dist_ndx = 0; dist_ndx < KNearestNeighbors.size(); dist_ndx++)
+		for (dist_ndx = 0; dist_ndx < this.K; dist_ndx++)
 			System.out.println(distances[dist_ndx]);
-
 	}
 
+	// Return exact nearest neighbors using hashing
 	private List<SearchableObject> getExactKNearestNeighbors(List<Double> vector)
 	{
 		List<SearchableObject> KNearestNeighbors = new ArrayList<SearchableObject>();
-		List<Double> MAX_VECTOR = new ArrayList<Double>(this.NUMBER_OF_DIMENSIONS);
+		List<Double> MAX_VECTOR = new ArrayList<Double>();
 		for (int i = 0; i < this.NUMBER_OF_DIMENSIONS; i++)
 			MAX_VECTOR.add(Double.MAX_VALUE);
 
@@ -211,13 +212,53 @@ public class RunLSH {
 			}
 			KNearestNeighbors.add(min_vector);
 		}
-		return KNearestNeighbors;
+		return removeDuplicates(KNearestNeighbors);
 	}
 
 	private List<SearchableObject> getMultiProbeNearestNeighbors(List<Double> queryVector, List<Perturbation> perturbations)
 	{
 		PerturbationSequenceMapping runMultiProbe = new PerturbationSequenceMapping(this.NUMBER_OF_HASHFUNCTIONS, this.SLOT_WIDTH, this.K, this.NUMBER_OF_HASHTABLES, this.imageIndex.getImageIndex(), queryVector, perturbations);
-		return runMultiProbe.getQueryResults();
+		return removeDuplicates(runMultiProbe.getQueryResults());
 	}
+
+	// Return raw nearest neighbors without yet hashing
+	private List<SearchableObject> getRawKNeaerestNeighbors(List<Double> vector)
+	{
+		List<SearchableObject> data = this.imageIndex.getRawFeatureVectors();
+
+		List<SearchableObject> KNearestNeighbors = new ArrayList<SearchableObject>();
+		List<Double> MAX_VECTOR = new ArrayList<Double>();
+		for (int i = 0; i < this.NUMBER_OF_DIMENSIONS; i++)
+			MAX_VECTOR.add(Double.MAX_VALUE);
+
+		// Find K-Nearest Neighbors
+		for (int i = 0; i < this.K; i++) {
+			SearchableObject min_vector = new SearchableObject(MAX_VECTOR, null);
+
+			SearchableObject queryObject = new SearchableObject(vector, null);
+			for (SearchableObject object : data) {
+				if ((object.distanceTo(queryObject) < min_vector.distanceTo(queryObject)) &&
+						(!KNearestNeighbors.contains(object)))  {
+					min_vector = new SearchableObject(object.getObjectFeatures(), null);
+				}
+			}
+
+			KNearestNeighbors.add(min_vector);
+		}
+		return removeDuplicates(KNearestNeighbors);
+
+	}
+
+	// Due to the existence of multiple hashtables, we originally get many duplicates.
+	// This removes them.
+	private ArrayList<SearchableObject> removeDuplicates(List<SearchableObject> vector)
+	{
+		Set<SearchableObject> hs = new HashSet<>();
+		hs.addAll(vector);
+		vector.clear();
+		vector.addAll(hs);
+		return new ArrayList(vector);
+	}
+
 
 }

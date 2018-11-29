@@ -33,14 +33,14 @@ public class HashFunction implements Serializable {
 		
 	}
 
-	public HashFunction(int numberOfDimensions, double slotWidthW, double eigenVector[]) {
+	public HashFunction(int numberOfDimensions, double slotWidthW, double eigenVector[], Random randomNumberGenerator) {
 		this.numberOfDimensions = numberOfDimensions;
-		this.hashFunctionCoefficients = new ArrayList<Double>(numberOfDimensions);
+		this.hashFunctionCoefficients = new ArrayList<Double>();
 
 		for (int i = 0; i < numberOfDimensions; i++)
 			hashFunctionCoefficients.add(eigenVector[i]);
 
-		this.offset = 0.0;
+		this.offset = randomNumberGenerator.nextDouble() * slotWidthW;
 		this.slotWidthW = slotWidthW;
 	}
 	

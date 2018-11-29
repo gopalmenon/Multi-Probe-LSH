@@ -104,7 +104,7 @@ public class ImageIndex implements Serializable {
 			RealMatrix V = VDV.getV();
 
 			// Construct random indexing array
-			int numEigenVectors = Math.min(this.numberOfHashFunctions * this.numberOfHashTables, this.numberOfImageFeatures);
+			int numEigenVectors = this.numberOfImageFeatures;
 			int eigenVectorIndex[] = new int[numEigenVectors];
 			for (int i = 0; i < numEigenVectors; i++)
 				eigenVectorIndex[i] = i;
@@ -119,21 +119,47 @@ public class ImageIndex implements Serializable {
 				eigenVectorIndex[i] = a;
 			}
 
+			int ML = this.numberOfHashFunctions * this.numberOfHashTables;
+			double eigenvectors[][] = new double[this.numberOfHashFunctions][Math.max(this.numberOfImageFeatures, ML)];
+
+			// We have two cases to consider. 1) More eigenvectors (or dimension) than M*L and less eigenvectors than M*L
+			if (ML <= this.numberOfImageFeatures)
+				for (int i = 0; i < this.numberOfImageFeatures; i++)
+					eigenvectors[i] = V.getColumn(i);
+
+			else
+			{
+				for (int i = 0; i < this.numberOfImageFeatures; i++)
+					eigenvectors[i] = V.getColumn(i);
+
+				for (int i = this.numberOfImageFeatures; i < ML; i++)
+				{
+					int a = randomNumberGenerator.nextInt(this.numberOfImageFeatures);
+					int b = randomNumberGenerator.nextInt(this.numberOfImageFeatures);
+					double c1 = randomNumberGenerator.nextDouble();
+					double c2 = randomNumberGenerator.nextDouble();
+
+					double linearCombination[] = new double[this.numberOfImageFeatures];
+
+					for (int j = 0; j < this.numberOfImageFeatures; j++)
+						linearCombination[j] = (c1 * eigenvectors[a][j])+ (c2 * eigenvectors[b][j]);
+
+					eigenvectors[i] = linearCombination;
+
+				}
+			}
+
 			int eig_ndx = 0;
 			for (int i = 0; i < this.numberOfHashTables; i++){
-				double eigenvectors[][] = new double[this.numberOfHashFunctions][this.numberOfImageFeatures];
+				double vectors[][] = new double[this.numberOfHashFunctions][this.numberOfImageFeatures];
 
-//				for (int j = 0; j < this.numberOfHashFunctions; j++){
-//					eigenvectors[j] = V.getRow(eigenVectorIndex[eig_ndx]);
-//					eig_ndx = (eig_ndx + 1) % numEigenVectors;
-//				}
-
-				for (int j = 0; j < this.numberOfHashFunctions; j++){
-					eigenvectors[j] = V.getColumn(eig_ndx);
-					eig_ndx = (eig_ndx + 1) % numEigenVectors;
+				for (int j = 0; j < this.numberOfHashFunctions; j++)
+				{
+					vectors[eig_ndx] = eigenvectors[eig_ndx];
+					eig_ndx++;
 				}
 
-				this.hashTables.add(new HashTable(this.numberOfHashFunctions, this.numberOfImageFeatures, this.slotWidth, eigenvectors));
+				this.hashTables.add(new HashTable(this.numberOfHashFunctions, this.numberOfImageFeatures, this.slotWidth, vectors));
 			}
 		}
 	}

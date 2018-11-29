@@ -82,11 +82,17 @@ public class HashTable implements Serializable {
 		Set<Map.Entry<HashBucket, SearchableObject>> entrySet = this.objectIndex.entrySet();
 		
 		List<SearchableObject> objectsInBucket = new ArrayList<SearchableObject>();
-		for (Map.Entry<HashBucket, SearchableObject> entry : entrySet) {
-			if (entry.getKey().equals(hashBucket)) {
-				objectsInBucket.add(entry.getValue());
-			}
+//		for (Map.Entry<HashBucket, SearchableObject> entry : entrySet) {
+//			if (entry.getKey().equals(hashBucket)) {
+//				objectsInBucket.add(entry.getValue());
+//			}
+//		}
+		if (this.objectIndex.get(hashBucket) != null)
+		{
+			SearchableObject so = this.objectIndex.get(hashBucket);
+			objectsInBucket.add(so);
 		}
+
 		return objectsInBucket;
 		
 	}

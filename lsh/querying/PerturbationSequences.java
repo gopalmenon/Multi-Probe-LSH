@@ -38,9 +38,6 @@ public class PerturbationSequences {
     }
 
     private boolean isValidPerturbation(Perturbation candidatePerturbation) {
-
-//        if (candidatePerturbation.getPerturbedVector().size() != this.numberOfHashFunctions)
-//            return false;
         int indexForDistanceToPreviousSlot = 0, perturbationComponent = 0;
         List<Integer> candidatePerturbationVector = candidatePerturbation.getPerturbedVector();
         for (int perturbationComponentIndex = 0; perturbationComponentIndex < candidatePerturbationVector.size(); ++perturbationComponentIndex) {
@@ -55,7 +52,6 @@ public class PerturbationSequences {
             }
             else return false;
         }
-       // System.out.println("Found good vector!");
         return true;
     }
 

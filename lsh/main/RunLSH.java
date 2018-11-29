@@ -22,10 +22,10 @@ public class RunLSH {
 	public static final String USER_QUIT_INPUT = "Quit";
 	
 	private ImageIndex imageIndex;
-	private int NUMBER_OF_DIMENSIONS = 4;
-	private int NUMBER_OF_HASHFUNCTIONS = 4;
+	private int NUMBER_OF_DIMENSIONS = 8;
+	private int NUMBER_OF_HASHFUNCTIONS = 8;
 	private int NUMBER_OF_HASHTABLES = 1;
-	private double SLOT_WIDTH = 0.1;
+	private double SLOT_WIDTH = 0.0001;
 	private boolean USE_EIGENVECTORS = false;
 	private int K = 3;
 
@@ -179,7 +179,7 @@ public class RunLSH {
 
 		Arrays.sort(distances);
 
-		System.out.print("Sorted distances is:");
+		System.out.println("Sorted K distances is:");
 		for (dist_ndx = 0; dist_ndx < KNearestNeighbors.size(); dist_ndx++)
 			System.out.println(distances[dist_ndx]);
 

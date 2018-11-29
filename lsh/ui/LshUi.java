@@ -1,13 +1,16 @@
 package ui;
 
+import indexing.ImageIndex;
+
 import java.awt.*;
 import java.awt.event.*;
 import javax.imageio.ImageIO;
+import java.io.*;
 import java.net.URL;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileSystemView;
 import javax.swing.*;
 
 public class LshUi {
@@ -16,16 +19,19 @@ public class LshUi {
 
     public static final int DEFAULT_NUMBER_OF_HASHFUNCTIONS = 4;
     public static final int DEFAULT_NUMBER_OF_HASHTABLES = 1;
+    public static final int DEFAULT_NUMBER_OF_DIMENSIONS = 240;
     public static final double DEFAULT_SLOT_WIDTH = 0.1;
     public static final boolean DEFAULT_USE_EIGENVECTORS = false;
 
-    private int numberOfHashFunctions, numberOfHashTables;
+    private int numberOfHashFunctions, numberOfHashTables, numberOfDimensions;
     private double slotWidth;
     private boolean useEigenVectorsForHashing;
+    private ImageIndex imageIndex;
 
     public LshUi() {
         this.numberOfHashFunctions = DEFAULT_NUMBER_OF_HASHFUNCTIONS;
         this.numberOfHashTables = DEFAULT_NUMBER_OF_HASHTABLES;
+        this.numberOfDimensions = DEFAULT_NUMBER_OF_DIMENSIONS;
         this.slotWidth = DEFAULT_SLOT_WIDTH;
         this.useEigenVectorsForHashing = DEFAULT_USE_EIGENVECTORS;
     }
@@ -48,7 +54,7 @@ public class LshUi {
 
         //Create user menus
         JMenu fileMenu, searchMenu, settingsMenu, metricsMenu;
-        JMenuItem buildIndexMenuItem, loadIndexMenuItem, exitMenuItem, searchByUrlMenuItem, searchByFileMenuItem, numberOfHashFunctionsMenuItem, numberOfHashTablesMenuItem, slotWidthMenuItem;
+        JMenuItem buildIndexMenuItem, loadIndexMenuItem, exitMenuItem, searchByUrlMenuItem, searchByFileMenuItem, numberOfHashFunctionsMenuItem, numberOfHashTablesMenuItem, numberOfDimensionsMenuItem, slotWidthMenuItem;
         JCheckBoxMenuItem useEigenVectorHashCheckBoxMenuItem;
 
         //File menu
@@ -82,6 +88,9 @@ public class LshUi {
         numberOfHashTablesMenuItem = new JMenuItem("Set Number of Hash Tables");
         numberOfHashTablesMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {setNumberOfHashTables();} });
         settingsMenu.add(numberOfHashTablesMenuItem);
+        numberOfDimensionsMenuItem = new JMenuItem("Set Number of Dimensions");
+        numberOfDimensionsMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {setNumberOfDimensions();} });
+        settingsMenu.add(numberOfDimensionsMenuItem);
         slotWidthMenuItem = new JMenuItem("Set Slot Width");
         slotWidthMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {setSlotWidth();} });
         settingsMenu.add(slotWidthMenuItem);
@@ -103,12 +112,81 @@ public class LshUi {
         frame.setVisible(true);
     }
 
+    /**
+     * Select image urls from a file and build an index. Prompt the user to save the index.
+     */
     private void buildIndex() {
+
+        File imageUrlsFile = null;
+
+        JFileChooser jfc = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+        jfc.setDialogTitle("Select file containing image urls:");
+        jfc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+        int returnValue = jfc.showOpenDialog(null);
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            imageUrlsFile = jfc.getSelectedFile();
+        } else {
+            return;
+        }
+
+        //Create the index and save it
+        this.imageIndex = new ImageIndex(this.numberOfHashFunctions, this.numberOfHashTables, this.numberOfDimensions, this.slotWidth, this.useEigenVectorsForHashing, imageUrlsFile, false);
+        try {
+
+            JFileChooser fileChooser = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+            fileChooser.setDialogTitle("Specify file to save index in:");
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+            returnValue = fileChooser.showSaveDialog(null);
+            if (returnValue == JFileChooser.APPROVE_OPTION) {
+                if (!fileChooser.getSelectedFile().isDirectory()) {
+                    FileOutputStream savedIndexFile = new FileOutputStream(fileChooser.getSelectedFile());
+                    ObjectOutputStream out = new ObjectOutputStream(savedIndexFile);
+                    out.writeObject(this.imageIndex);
+                    out.close();
+                    savedIndexFile.close();
+                }
+            }
+
+
+        } catch(IOException e) {
+            JOptionPane.showMessageDialog(null, "IOException was caught. Could not save index.");
+            System.out.println("IOException was caught. Could not save index.");
+        }
 
     }
 
     private void loadIndex() {
 
+
+        File imageIndexFile = null;
+
+        JFileChooser jfc = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+        jfc.setDialogTitle("Select index file:");
+        jfc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+        int returnValue = jfc.showOpenDialog(null);
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            imageIndexFile = jfc.getSelectedFile();
+        } else {
+            return;
+        }
+
+        try {
+            //Load the saved index
+            FileInputStream savedIndexFile = new FileInputStream(imageIndexFile);
+            ObjectInputStream in = new ObjectInputStream(savedIndexFile);
+            this.imageIndex = (ImageIndex)in.readObject();
+            in.close();
+            savedIndexFile.close();
+        } catch(IOException e) {
+            JOptionPane.showMessageDialog(null, "IOException was caught. Could not load index.");
+            System.err.println("IOException was caught. Could not load index.");
+        } catch(ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(null, "Selected file does not contain an index.");
+            System.err.println("ClassNotFoundException is caught. Could not load index.");
+        }
     }
 
     private void searchByUrl() {
@@ -119,6 +197,9 @@ public class LshUi {
 
     }
 
+    /**
+     * Ask user for number of hash functions setting
+     */
     private void setNumberOfHashFunctions() {
 
         int numberOfHashFunctions = 0;
@@ -140,6 +221,9 @@ public class LshUi {
 
     }
 
+    /**
+     * Ask user for number oif hash tables setting
+     */
     private void setNumberOfHashTables() {
 
         int numberOfHashTables = 0;
@@ -160,6 +244,33 @@ public class LshUi {
         }
     }
 
+    /**
+     * Ask user for number of dimensions for image features
+     */
+    private void setNumberOfDimensions() {
+
+        int numberOfDimensions = 0;
+        String dimensionsCount = null;
+        while(true) {
+            dimensionsCount = JOptionPane.showInputDialog("Number of Dimensions: ", this.numberOfDimensions);
+            if (dimensionsCount == null) {
+                break;
+            }
+            try {
+                numberOfDimensions = Integer.parseInt(dimensionsCount);
+                this.numberOfDimensions = numberOfDimensions;
+                break;
+            } catch (NumberFormatException e) {
+
+            }
+
+        }
+
+    }
+
+    /**
+     * Ask user for slot width setting
+     */
     private void setSlotWidth() {
 
         double slotWidth = 0.0;
@@ -181,6 +292,9 @@ public class LshUi {
 
     }
 
+    /**
+     * Say whether to use Eigen vectors as hash functions or not
+     */
     private void toggleUseEigenVectors() {
 
         if (this.useEigenVectorsForHashing) {

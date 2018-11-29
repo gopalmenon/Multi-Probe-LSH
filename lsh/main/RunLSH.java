@@ -179,7 +179,11 @@ public class RunLSH {
 
 		Arrays.sort(distances);
 
+<<<<<<< HEAD
 		System.out.println("Sorted K distances is:");
+=======
+		System.out.print("Sorted distances is:");
+>>>>>>> b658e2c34cb1632795a46c394e38a539451b97a9
 		for (dist_ndx = 0; dist_ndx < KNearestNeighbors.size(); dist_ndx++)
 			System.out.println(distances[dist_ndx]);
 

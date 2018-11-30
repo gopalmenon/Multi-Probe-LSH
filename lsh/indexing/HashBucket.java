@@ -42,7 +42,8 @@ public class HashBucket implements Serializable {
 	 */
 	@Override
 	public boolean equals(Object other) {
-		
+		if (other == null)
+			return false;
 		if (other instanceof HashBucket) {
 			HashBucket otherHashBucket = (HashBucket) other;
 			if (this.objectHashBucket.size() == otherHashBucket.objectHashBucket.size()) {

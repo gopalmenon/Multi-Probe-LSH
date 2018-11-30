@@ -16,7 +16,7 @@ public class HashTable implements Serializable {
 	private static final long serialVersionUID = 2L;
 	private List<HashFunction> hashFunctionTable;
 	private int numberOfHashFunctions;
-	private Map<HashBucket, SearchableObject> objectIndex;
+	private Map<HashBucket, List<SearchableObject>> objectIndex;
 	
 	public HashTable(int numberOfHashFunctions, int numberOfDimensions, double slotWidthW, Random randomNumberGenerator) {
 		
@@ -26,19 +26,19 @@ public class HashTable implements Serializable {
 		}
 		
 		this.numberOfHashFunctions = numberOfHashFunctions;
-		this.objectIndex = new HashMap<HashBucket, SearchableObject>();
+		this.objectIndex = new HashMap<HashBucket, List<SearchableObject>>();
 	}
 
-	public HashTable(int numberOfHashFunctions, int numberOfDimensions, double slotWidthW, double[][] eigenVectors) {
+	public HashTable(int numberOfHashFunctions, int numberOfDimensions, double slotWidthW, double[][] eigenVectors, Random randomNumberGenerator) {
 		this.hashFunctionTable = new ArrayList<HashFunction>(numberOfHashFunctions);
 
 		this.numberOfHashFunctions = numberOfHashFunctions;
 
         for (int hashFunctionCounter = 0; hashFunctionCounter < numberOfHashFunctions; ++hashFunctionCounter) {
-            this.hashFunctionTable.add(new HashFunction(numberOfDimensions, slotWidthW, eigenVectors[hashFunctionCounter]));
+            this.hashFunctionTable.add(new HashFunction(numberOfDimensions, slotWidthW, eigenVectors[hashFunctionCounter], randomNumberGenerator));
         }
 
-		this.objectIndex = new HashMap<HashBucket, SearchableObject>();
+		this.objectIndex = new HashMap<HashBucket, List<SearchableObject>>();
 	}
 
 	/**
@@ -49,7 +49,7 @@ public class HashTable implements Serializable {
 		
 		List<Double> objectFeatures = searchableObject.getObjectFeatures();
 		
-		List<Integer> objectHashBucket = new ArrayList<Integer>(this.numberOfHashFunctions);
+		List<Integer> objectHashBucket = new ArrayList<Integer>();
 		for (int hashFunctionCounter = 0; hashFunctionCounter < this.numberOfHashFunctions; ++hashFunctionCounter) {
 			objectHashBucket.add(this.hashFunctionTable.get(hashFunctionCounter).getSlotNumber(objectFeatures));
 		}
@@ -62,16 +62,14 @@ public class HashTable implements Serializable {
 	 * @param searchableObject
 	 * @return true if object is added to the index
 	 */
-	public boolean add(SearchableObject searchableObject) {
+	public void add(SearchableObject searchableObject) {
 		
 		HashBucket hashBucket = getHashBucket(searchableObject);
-		if (this.objectIndex.containsKey(hashBucket)) {
-			return false;
+		if (!this.objectIndex.containsKey(hashBucket)) {
+			this.objectIndex.put(hashBucket, new ArrayList<SearchableObject>());
 		}
 		
-		this.objectIndex.put(hashBucket, searchableObject);
-		return true;
-		
+		this.objectIndex.get(hashBucket).add(searchableObject);
 	}
 	
 	/**
@@ -79,30 +77,12 @@ public class HashTable implements Serializable {
 	 * @return a list of objects in the bucket
 	 */
 	public List<SearchableObject> getObjects(HashBucket hashBucket) {
-		Set<Map.Entry<HashBucket, SearchableObject>> entrySet = this.objectIndex.entrySet();
-		
-		List<SearchableObject> objectsInBucket = new ArrayList<SearchableObject>();
-		for (Map.Entry<HashBucket, SearchableObject> entry : entrySet) {
-			if (entry.getKey().equals(hashBucket)) {
-				objectsInBucket.add(entry.getValue());
-			}
-		}
+		List<SearchableObject> objectsInBucket = new ArrayList<>();
+		if (this.objectIndex.get(hashBucket) != null)
+			objectsInBucket.addAll(this.objectIndex.get(hashBucket));
+
 		return objectsInBucket;
 		
-	}
-
-	public List<SearchableObject> getObjects(List<Integer> hashcode) {
-		Set<Map.Entry<HashBucket, SearchableObject>> entrySet = this.objectIndex.entrySet();
-		HashBucket probeBucket = new HashBucket(hashcode);
-
-		List<SearchableObject> objectsInBucket = new ArrayList<SearchableObject>();
-		for (Map.Entry<HashBucket, SearchableObject> entry : entrySet) {
-			if (entry.getKey().hashCode() == probeBucket.hashCode()) {
-				objectsInBucket.add(entry.getValue());
-			}
-		}
-		return objectsInBucket;
-
 	}
 
 	public List<SearchableObject> getAllObjects()

@@ -5,6 +5,7 @@ import indexing.ImageIndex;
 import java.awt.*;
 import java.awt.event.*;
 import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ import java.util.List;
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileSystemView;
 import javax.swing.*;
+import java.net.MalformedURLException;
 
 public class LshUi {
 
@@ -27,6 +29,7 @@ public class LshUi {
     private double slotWidth;
     private boolean useEigenVectorsForHashing;
     private ImageIndex imageIndex;
+    private JMenu searchMenu, settingsMenu;
 
     public LshUi() {
         this.numberOfHashFunctions = DEFAULT_NUMBER_OF_HASHFUNCTIONS;
@@ -53,7 +56,7 @@ public class LshUi {
         menuBar.setPreferredSize(new Dimension(DEFAULT_WIDTH, 20));
 
         //Create user menus
-        JMenu fileMenu, searchMenu, settingsMenu, metricsMenu;
+        JMenu fileMenu, metricsMenu;
         JMenuItem buildIndexMenuItem, loadIndexMenuItem, exitMenuItem, searchByUrlMenuItem, searchByFileMenuItem, numberOfHashFunctionsMenuItem, numberOfHashTablesMenuItem, numberOfDimensionsMenuItem, slotWidthMenuItem;
         JCheckBoxMenuItem useEigenVectorHashCheckBoxMenuItem;
 
@@ -79,6 +82,7 @@ public class LshUi {
         searchByFileMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {searchByImageFile();} });
         searchMenu.add(searchByFileMenuItem);
         menuBar.add(searchMenu);
+        searchMenu.setEnabled(false);
 
         //Settings menu
         settingsMenu = new JMenu("Settings");
@@ -132,6 +136,8 @@ public class LshUi {
 
         //Create the index and save it
         this.imageIndex = new ImageIndex(this.numberOfHashFunctions, this.numberOfHashTables, this.numberOfDimensions, this.slotWidth, this.useEigenVectorsForHashing, imageUrlsFile, false);
+        this.searchMenu.setEnabled(true);
+        this.settingsMenu.setEnabled(false);
         try {
 
             JFileChooser fileChooser = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
@@ -180,6 +186,8 @@ public class LshUi {
             this.imageIndex = (ImageIndex)in.readObject();
             in.close();
             savedIndexFile.close();
+            this.searchMenu.setEnabled(true);
+            this.settingsMenu.setEnabled(false);
         } catch(IOException e) {
             JOptionPane.showMessageDialog(null, "IOException was caught. Could not load index.");
             System.err.println("IOException was caught. Could not load index.");
@@ -191,9 +199,58 @@ public class LshUi {
 
     private void searchByUrl() {
 
+        String urlStringSuppliedByUser = null;
+        while(true) {
+            urlStringSuppliedByUser = JOptionPane.showInputDialog("ImageURL: ");
+            if (urlStringSuppliedByUser == null) {
+                break;
+            }
+            try {
+                BufferedImage image = ImageIO.read(new URL(urlStringSuppliedByUser).openStream());
+                if (image == null) {
+                    JOptionPane.showMessageDialog(null, "Could not obtain image from URL.");
+                }
+                searchForImageInIndex(image);
+                break;
+            } catch (MalformedURLException e) {
+                JOptionPane.showMessageDialog(null, "MalformedURLException was caught. Could not obtain image from URL.");
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(null, "IOException was caught. Could read in the image from URL.");
+            }
+        }
+
+    }
+
+    private void searchForImageInIndex(BufferedImage imageToSearch) {
+
+        BufferedImage inputImage = imageToSearch;
     }
 
     private void searchByImageFile() {
+
+        File imageFileSelected = null;
+        JFileChooser jfc = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+        jfc.setDialogTitle("Select image to search for similar images:");
+        jfc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+        int returnValue = jfc.showOpenDialog(null);
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            imageFileSelected = jfc.getSelectedFile();
+        } else {
+            return;
+        }
+
+        try {
+            BufferedImage imageSelected = ImageIO.read(imageFileSelected);
+            if (imageSelected == null) {
+                JOptionPane.showMessageDialog(null, "Could not process selected file as image.");
+            } else {
+                searchForImageInIndex(imageSelected);
+            }
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "IOException was caught. Could not process selected file as image.");
+        }
+
 
     }
 

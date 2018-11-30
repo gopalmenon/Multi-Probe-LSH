@@ -48,7 +48,7 @@ public class HashFunction implements Serializable {
 	 * @param objectFeatures
 	 * @return slot number for locality sensitive hashing
 	 */
-	public int getSlotNumber(List<Double> objectFeatures) {
+	public int getSlotNumber(List<Integer> objectFeatures) {
 		
 		assert objectFeatures.size() == this.hashFunctionCoefficients.size() : 
 			"Size mismatch between object to be hashed and hash function";

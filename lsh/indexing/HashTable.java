@@ -47,7 +47,7 @@ public class HashTable implements Serializable {
 	 */
 	public HashBucket getHashBucket(SearchableObject searchableObject) {
 		
-		List<Double> objectFeatures = searchableObject.getObjectFeatures();
+		List<Integer> objectFeatures = searchableObject.getObjectFeatures();
 		
 		List<Integer> objectHashBucket = new ArrayList<Integer>();
 		for (int hashFunctionCounter = 0; hashFunctionCounter < this.numberOfHashFunctions; ++hashFunctionCounter) {

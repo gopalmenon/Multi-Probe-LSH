@@ -11,16 +11,16 @@ public class SearchableObject implements Serializable{
 	 * 
 	 */
 	private static final long serialVersionUID = 5L;
-	private List<Double> objectFeatures;
+	private List<Integer> objectFeatures;
 	private final URL objectUrl;
 	
-	public SearchableObject(List<Double> objectFeatures, URL objectUrl) {
+	public SearchableObject(List<Integer> objectFeatures, URL objectUrl) {
 		this.objectFeatures = objectFeatures;
 		this.objectUrl = objectUrl;
 	}
 	
 
-	public List<Double> getObjectFeatures() {
+	public List<Integer> getObjectFeatures() {
 		return Collections.unmodifiableList(objectFeatures);
 	}
 

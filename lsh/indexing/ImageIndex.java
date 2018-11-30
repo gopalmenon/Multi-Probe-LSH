@@ -1,5 +1,6 @@
 package indexing;
 
+import images.FeatureFactory;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.EigenDecomposition;
 import org.apache.commons.math3.linear.RealMatrix;
@@ -28,7 +29,7 @@ public class ImageIndex implements Serializable {
 	private double slotWidth;
 	private boolean useEigenVectorsToHash;
 	private File imageUrls;
-	private Map<URL, List<Double>> imageFeatures;
+	private Map<URL, List<Integer>> imageFeatures;
 	private List<SearchableObject> rawFeatureVectors;
 	private List<HashTable> hashTables;
 	private Random randomNumberGenerator;
@@ -46,7 +47,7 @@ public class ImageIndex implements Serializable {
 			this.imageUrls = new File(IMAGE_URLS);
 		}
 		this.hashTables = new ArrayList<HashTable>(this.numberOfHashTables);
-		this.imageFeatures = new HashMap<URL, List<Double>>();
+		this.imageFeatures = new HashMap<URL, List<Integer>>();
 		this.rawFeatureVectors = new ArrayList<>();
 		this.randomNumberGenerator = new Random();
 		this.secondPass = false;
@@ -155,6 +156,8 @@ public class ImageIndex implements Serializable {
 	 */
 	private void createImageIndex() {
 		URL imageUrl = null;
+		FeatureFactory featureFactory = new FeatureFactory();
+		BufferedImage image = null;
 
 		try {
 			BufferedReader bufferedReader = new BufferedReader(new FileReader(this.imageUrls));
@@ -169,17 +172,17 @@ public class ImageIndex implements Serializable {
 					continue;
 				}
 				try {
-					BufferedImage image = ImageIO.read(imageUrl.openStream());
+					image = ImageIO.read(imageUrl.openStream());
+					//Create color histogram for the image
+					List<Integer> imageFeatures = featureFactory.imageHistogram(image);
+					//Store the image features for later use
+					this.imageFeatures.put(imageUrl, imageFeatures);
+					this.rawFeatureVectors.add(new SearchableObject(imageFeatures, imageUrl));
+
 				} catch (Exception e) {
 					System.err.println("Error reading " + fileLine + ". File skipped.");
 				}
 				
-				//Create color histogram for the image
-				List<Double> imageFeatures = Arrays.asList(Double.valueOf(this.randomNumberGenerator.nextDouble()), Double.valueOf(this.randomNumberGenerator.nextDouble()), Double.valueOf(this.randomNumberGenerator.nextDouble()), Double.valueOf(this.randomNumberGenerator.nextDouble()), Double.valueOf(this.randomNumberGenerator.nextDouble()));
-				
-				//Store the image features for later use
-				this.imageFeatures.put(imageUrl, imageFeatures);
-				this.rawFeatureVectors.add(new SearchableObject(imageFeatures, imageUrl));
 
 				fileLine = bufferedReader.readLine();
 			}
@@ -206,9 +209,9 @@ public class ImageIndex implements Serializable {
 			String line = null;
 			while ((line = br.readLine()) != null) {
 				String[] elements = line.split("\\s+");
-				List<Double> vector = new ArrayList<Double>();
+				List<Integer> vector = new ArrayList<Integer>();
 				for (int i = 0; i < this.numberOfImageFeatures; i++) {
-					vector.add(Double.parseDouble(elements[i]));
+					vector.add(Integer.parseInt(elements[i]));
 				}
 				this.rawFeatureVectors.add(new SearchableObject(vector, null));
 			}
@@ -221,7 +224,7 @@ public class ImageIndex implements Serializable {
 	
 	public List<HashTable> getImageIndex() { return this.hashTables; }
 	
-	public Map<URL, List<Double>> getImageFeatures() {	return this.imageFeatures; }
+	public Map<URL, List<Integer>> getImageFeatures() {	return this.imageFeatures; }
 
 	public List<SearchableObject> getRawFeatureVectors() {return this.rawFeatureVectors; }
 }

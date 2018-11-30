@@ -134,9 +134,9 @@ public class RunLSH {
 		System.out.print("Running with vector v = (0.5, ..., 0.5): \n");
 
 		// Make testing vector v = (0.5, ..., 0.5)
-		List<Double> vector = new ArrayList<Double>();
+		List<Integer> vector = new ArrayList<Integer>();
 		for (int i = 0; i < this.NUMBER_OF_DIMENSIONS; i++)
-			vector.add(Double.valueOf(0.5));
+			vector.add(Integer.valueOf(1));
 
 		// Find absolute K - Nearest Neighbors using raw data before hashing
 		System.out.println("Begin finding raw K nearest neighbors");
@@ -190,12 +190,12 @@ public class RunLSH {
 	}
 
 	// Return exact nearest neighbors using hashing
-	private List<SearchableObject> getExactKNearestNeighbors(List<Double> vector)
+	private List<SearchableObject> getExactKNearestNeighbors(List<Integer> vector)
 	{
 		List<SearchableObject> KNearestNeighbors = new ArrayList<SearchableObject>();
-		List<Double> MAX_VECTOR = new ArrayList<Double>();
+		List<Integer> MAX_VECTOR = new ArrayList<Integer>();
 		for (int i = 0; i < this.NUMBER_OF_DIMENSIONS; i++)
-			MAX_VECTOR.add(Double.MAX_VALUE);
+			MAX_VECTOR.add(Integer.MAX_VALUE);
 
 		// Find K-Nearest Neighbors
 		for (int i = 0; i < this.K; i++) {
@@ -215,21 +215,21 @@ public class RunLSH {
 		return removeDuplicates(KNearestNeighbors);
 	}
 
-	private List<SearchableObject> getMultiProbeNearestNeighbors(List<Double> queryVector, List<Perturbation> perturbations)
+	private List<SearchableObject> getMultiProbeNearestNeighbors(List<Integer> queryVector, List<Perturbation> perturbations)
 	{
 		PerturbationSequenceMapping runMultiProbe = new PerturbationSequenceMapping(this.NUMBER_OF_HASHFUNCTIONS, this.SLOT_WIDTH, this.K, this.NUMBER_OF_HASHTABLES, this.imageIndex.getImageIndex(), queryVector, perturbations);
 		return removeDuplicates(runMultiProbe.getQueryResults());
 	}
 
 	// Return raw nearest neighbors without yet hashing
-	private List<SearchableObject> getRawKNeaerestNeighbors(List<Double> vector)
+	private List<SearchableObject> getRawKNeaerestNeighbors(List<Integer> vector)
 	{
 		List<SearchableObject> data = this.imageIndex.getRawFeatureVectors();
 
 		List<SearchableObject> KNearestNeighbors = new ArrayList<SearchableObject>();
-		List<Double> MAX_VECTOR = new ArrayList<Double>();
+		List<Integer> MAX_VECTOR = new ArrayList<Integer>();
 		for (int i = 0; i < this.NUMBER_OF_DIMENSIONS; i++)
-			MAX_VECTOR.add(Double.MAX_VALUE);
+			MAX_VECTOR.add(Integer.MAX_VALUE);
 
 		// Find K-Nearest Neighbors
 		for (int i = 0; i < this.K; i++) {

@@ -17,12 +17,12 @@ public class PerturbationSequenceMapping {
     private double slotWidth;
     private int numberOfPerturbations;
     private int numberOfHashTables;
-    private List<Double> query;
+    private List<Integer> query;
     List<HashTable> hashTables;
     List<SearchableObject> returnSet;
     List<Perturbation> perturbations;
 
-    public PerturbationSequenceMapping(int numberOfHashFunctions, double slotWidth, int numberOfPerturbations, int numberOfHashTables, List<HashTable> hashTables, List<Double> query, List<Perturbation> perturbations)
+    public PerturbationSequenceMapping(int numberOfHashFunctions, double slotWidth, int numberOfPerturbations, int numberOfHashTables, List<HashTable> hashTables, List<Integer> query, List<Perturbation> perturbations)
     {
         this.numberOfHashFunctions = numberOfHashFunctions;
         this.slotWidth = slotWidth;
@@ -119,7 +119,7 @@ public class PerturbationSequenceMapping {
 
         @Override
         public int compareTo(distances other) {
-            return Double.valueOf(this.distance).compareTo(Double.valueOf(other.distance));
+            return Integer.valueOf(this.distance).compareTo(Integer.valueOf(other.distance));
         }
 
         public int getDistance() {

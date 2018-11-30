@@ -5,10 +5,14 @@ import java.io.Serializable;
 import javax.imageio.*;
 import java.io.*;
 import javax.media.jai.*;
+import java.util.List;
 import java.awt.*;
 import java.util.ArrayList;
 
 public class FeatureFactory implements Serializable {
+
+    public static final int HISTOGRAM_SLOTS_PER_BAND = 60;
+    public static final int NUMBER_OF_BANDS_USED = 3;
 
 // Example usage
 //    FeatureFactory ff = new FeatureFactory();
@@ -39,14 +43,14 @@ public class FeatureFactory implements Serializable {
         }
     }
 
-    public ArrayList<Integer> imageHistogram(BufferedImage image){
-        Histogram hist = new Histogram(60, 0, 60, 4);
+    public List<Double> imageHistogram(BufferedImage image){
+        Histogram hist = new Histogram(HISTOGRAM_SLOTS_PER_BAND, 0, HISTOGRAM_SLOTS_PER_BAND, image.getRaster().getNumBands());
         hist.countPixels(image.getRaster(), null, 0, 0, 1, 1);
         int[][] bins = hist.getBins();
-        ArrayList<Integer> histList = new ArrayList<Integer>(240);
-        for(int j = 0; j < 4; j++) {
-            for (int i = 0; i < 60; i++) {
-                histList.add(bins[j][i]);
+        List<Double> histList = new ArrayList<Double>(NUMBER_OF_BANDS_USED * HISTOGRAM_SLOTS_PER_BAND);
+        for(int j = 0; j < NUMBER_OF_BANDS_USED; j++) {
+            for (int i = 0; i < HISTOGRAM_SLOTS_PER_BAND; i++) {
+                histList.add(Double.valueOf(bins[j][i]));
             }
         }
         return histList;

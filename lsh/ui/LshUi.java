@@ -1,6 +1,11 @@
 package ui;
 
+import images.FeatureFactory;
 import indexing.ImageIndex;
+import indexing.SearchableObject;
+import querying.Perturbation;
+import querying.PerturbationSequenceMapping;
+import querying.PerturbationSequences;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -9,11 +14,13 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileSystemView;
 import javax.swing.*;
 import java.net.MalformedURLException;
+import java.util.Set;
 
 public class LshUi {
 
@@ -21,6 +28,7 @@ public class LshUi {
 
     public static final int DEFAULT_NUMBER_OF_HASHFUNCTIONS = 4;
     public static final int DEFAULT_NUMBER_OF_HASHTABLES = 1;
+    public static final int NEAREST_NEIGHBORS_TO_SEARCH = 5;
     public static final int DEFAULT_NUMBER_OF_DIMENSIONS = 180;
     public static final double DEFAULT_SLOT_WIDTH = 0.1;
     public static final boolean DEFAULT_USE_EIGENVECTORS = false;
@@ -30,6 +38,7 @@ public class LshUi {
     private boolean useEigenVectorsForHashing;
     private ImageIndex imageIndex;
     private JMenu searchMenu, settingsMenu;
+    private ImagePanel imagePanel;
 
     public LshUi() {
         this.numberOfHashFunctions = DEFAULT_NUMBER_OF_HASHFUNCTIONS;
@@ -109,11 +118,13 @@ public class LshUi {
 
         //Set the menu bar and add the label to the content pane.
         frame.setJMenuBar(menuBar);
-        frame.getContentPane().add(this.new ImagePanel());
+        this.imagePanel = this.new ImagePanel();
+        frame.getContentPane().add(this.imagePanel);
 
         //Display the window.
         frame.pack();
         frame.setVisible(true);
+        this.imagePanel.setVisible(true);
     }
 
     /**
@@ -223,7 +234,30 @@ public class LshUi {
 
     private void searchForImageInIndex(BufferedImage imageToSearch) {
 
-        BufferedImage inputImage = imageToSearch;
+        List<Double> imageFeatures = new FeatureFactory().imageHistogram(imageToSearch);
+        PerturbationSequences perturbationSequences = new PerturbationSequences(this.numberOfHashFunctions, this.slotWidth, NEAREST_NEIGHBORS_TO_SEARCH);
+        List<SearchableObject> kNearestNeighbors = getMultiProbeNearestNeighbors(imageFeatures, perturbationSequences.getPerturbations());
+        this.imagePanel.setImagesToDisplay(kNearestNeighbors);
+        this.imagePanel.repaint();
+    }
+
+
+    private List<SearchableObject> getMultiProbeNearestNeighbors(List<Double> queryVector, List<Perturbation> perturbations)
+    {
+        PerturbationSequenceMapping runMultiProbe = new PerturbationSequenceMapping(this.numberOfHashFunctions, this.slotWidth, NEAREST_NEIGHBORS_TO_SEARCH, this.numberOfHashTables, this.imageIndex.getImageIndex(), queryVector, perturbations);
+        return removeDuplicates(runMultiProbe.getQueryResults());
+    }
+
+
+    // Due to the existence of multiple hashtables, we originally get many duplicates.
+    // This removes them.
+    private ArrayList<SearchableObject> removeDuplicates(List<SearchableObject> vector)
+    {
+        Set<SearchableObject> hs = new HashSet<>();
+        hs.addAll(vector);
+        vector.clear();
+        vector.addAll(hs);
+        return new ArrayList(vector);
     }
 
     private void searchByImageFile() {
@@ -365,14 +399,14 @@ public class LshUi {
     //Panel to show images
     private class ImagePanel extends JPanel {
 
-        private List<URL> imagesToDisplay;
+        private List<SearchableObject> imagesToDisplay;
 
         public ImagePanel() {
-            this.imagesToDisplay = new ArrayList<URL>();
+            this.imagesToDisplay = new ArrayList<SearchableObject>();
             setPreferredSize(new Dimension(DEFAULT_WIDTH, DEFAULT_HEIGHT));
         }
 
-        public void setImagesToDisplay(List<URL> imagesToDisplay) {
+        public void setImagesToDisplay(List<SearchableObject> imagesToDisplay) {
             this.imagesToDisplay = imagesToDisplay;
         }
 
@@ -380,9 +414,9 @@ public class LshUi {
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
             try {
-                for (URL imageUrl : imagesToDisplay) {
+                for (SearchableObject searchableObject : imagesToDisplay) {
                     super.paintComponent(g);
-                    g.drawImage(ImageIO.read(imageUrl), 0, 0, this);
+                    g.drawImage(ImageIO.read(searchableObject.getObjectUrl()), 0, 0, this);
                 }
             } catch (IOException e) {
             }

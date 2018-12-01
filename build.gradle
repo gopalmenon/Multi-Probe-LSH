@@ -30,4 +30,4 @@ run{
     standardInput = System.in
 }
 
-mainClassName = "main.RunLSH"
+mainClassName = "ui.LshUi"

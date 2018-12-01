@@ -1,5 +1,6 @@
 package indexing;
 
+import images.FeatureFactory;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.EigenDecomposition;
 import org.apache.commons.math3.linear.RealMatrix;
@@ -170,16 +171,15 @@ public class ImageIndex implements Serializable {
 				}
 				try {
 					BufferedImage image = ImageIO.read(imageUrl.openStream());
+					//Create color histogram for the image
+					List<Double> imageFeatures = new FeatureFactory().imageHistogram(image);
+					//Store the image features for later use
+					this.imageFeatures.put(imageUrl, imageFeatures);
+					this.rawFeatureVectors.add(new SearchableObject(imageFeatures, imageUrl));
 				} catch (Exception e) {
 					System.err.println("Error reading " + fileLine + ". File skipped.");
 				}
 				
-				//Create color histogram for the image
-				List<Double> imageFeatures = Arrays.asList(Double.valueOf(this.randomNumberGenerator.nextDouble()), Double.valueOf(this.randomNumberGenerator.nextDouble()), Double.valueOf(this.randomNumberGenerator.nextDouble()), Double.valueOf(this.randomNumberGenerator.nextDouble()), Double.valueOf(this.randomNumberGenerator.nextDouble()));
-				
-				//Store the image features for later use
-				this.imageFeatures.put(imageUrl, imageFeatures);
-				this.rawFeatureVectors.add(new SearchableObject(imageFeatures, imageUrl));
 
 				fileLine = bufferedReader.readLine();
 			}

@@ -21,7 +21,7 @@ public class LshUi {
 
     public static final int DEFAULT_NUMBER_OF_HASHFUNCTIONS = 4;
     public static final int DEFAULT_NUMBER_OF_HASHTABLES = 1;
-    public static final int DEFAULT_NUMBER_OF_DIMENSIONS = 240;
+    public static final int DEFAULT_NUMBER_OF_DIMENSIONS = 180;
     public static final double DEFAULT_SLOT_WIDTH = 0.1;
     public static final boolean DEFAULT_USE_EIGENVECTORS = false;
 

@@ -30,7 +30,7 @@ public class LshUi {
     public static final int DEFAULT_NUMBER_OF_HASHTABLES = 1;
     public static final int NEAREST_NEIGHBORS_TO_SEARCH = 5;
     public static final int DEFAULT_NUMBER_OF_DIMENSIONS = 180;
-    public static final double DEFAULT_SLOT_WIDTH = 0.1;
+    public static final double DEFAULT_SLOT_WIDTH = 100.0;
     public static final boolean DEFAULT_USE_EIGENVECTORS = false;
 
     private int numberOfHashFunctions, numberOfHashTables, numberOfDimensions;

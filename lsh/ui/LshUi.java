@@ -3,6 +3,7 @@ package ui;
 import images.FeatureFactory;
 import indexing.ImageIndex;
 import indexing.SearchableObject;
+import querying.SearchableObjectComparator;
 import querying.Perturbation;
 import querying.PerturbationSequenceMapping;
 import querying.PerturbationSequences;
@@ -13,6 +14,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collections;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -154,14 +156,16 @@ public class LshUi {
                 new JScrollPane(imageViewContainer)));
     }
 
-    public void loadImages(List<SearchableObject> similarImages)  {
+    private void loadImages(List<SearchableObject> similarImages, List<Double> imageToSearchFeatures)  {
 
         int imageCounter = 0, numberOfImagesToShow = Math.min(DEFAULT_MAX_SEARCH_RESULTS_TO_DISPLAY, similarImages.size());
         BufferedImage[] images = new BufferedImage[numberOfImagesToShow];
         model.removeAllElements();
         BufferedImage image = null;
 
-        for (SearchableObject searchableObject : similarImages) {
+        List<SearchableObject> sortedImages = getSortedResults(similarImages, imageToSearchFeatures);
+
+        for (SearchableObject searchableObject : sortedImages) {
             if (imageCounter++ < numberOfImagesToShow) {
                 try {
                     image = ImageIO.read(searchableObject.getObjectUrl());
@@ -171,6 +175,19 @@ public class LshUi {
                 break;
             }
         }
+    }
+
+    /**
+     * Sort the query result by increasing distance from query object
+     * @param similarImages
+     * @return
+     */
+    private List<SearchableObject> getSortedResults(List<SearchableObject> similarImages, List<Double> imageToSearchFeatures) {
+
+        SearchableObjectComparator resultsComparator = new SearchableObjectComparator(new SearchableObject(imageToSearchFeatures, null));
+        Collections.sort(similarImages, resultsComparator);
+        return similarImages;
+
     }
 
     public Container getGui() {
@@ -295,7 +312,7 @@ public class LshUi {
         if (kNearestNeighbors.size() == 0) {
             JOptionPane.showMessageDialog(null, "No matches found.");
         } else {
-            loadImages(kNearestNeighbors);
+            loadImages(kNearestNeighbors, imageFeatures);
         }
 
     }

@@ -60,4 +60,9 @@ public class SearchableObject implements Serializable{
 		}
 		return true;
 	}
+
+	@Override
+	public int hashCode() {
+		return 2 * this.objectFeatures.hashCode() + this.objectUrl.hashCode();
+	}
 }

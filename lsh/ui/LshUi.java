@@ -9,18 +9,19 @@ import querying.PerturbationSequences;
 
 import java.awt.*;
 import java.awt.event.*;
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import javax.swing.JFileChooser;
-import javax.swing.filechooser.FileSystemView;
-import javax.swing.*;
-import java.net.MalformedURLException;
 import java.util.Set;
+import javax.swing.*;
+import javax.swing.event.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.imageio.ImageIO;
+import javax.swing.filechooser.FileSystemView;
 
 public class LshUi {
 
@@ -28,103 +29,156 @@ public class LshUi {
 
     public static final int DEFAULT_NUMBER_OF_HASHFUNCTIONS = 4;
     public static final int DEFAULT_NUMBER_OF_HASHTABLES = 1;
-    public static final int NEAREST_NEIGHBORS_TO_SEARCH = 5;
+    public static final int DEFAULT_NEAREST_NEIGHBORS_TO_SEARCH = 5;
+    public static final int DEFAULT_MAX_SEARCH_RESULTS_TO_DISPLAY = 25;
     public static final int DEFAULT_NUMBER_OF_DIMENSIONS = 180;
-    public static final double DEFAULT_SLOT_WIDTH = 100.0;
+    public static final double DEFAULT_SLOT_WIDTH = 1000000.0;
     public static final boolean DEFAULT_USE_EIGENVECTORS = false;
 
-    private int numberOfHashFunctions, numberOfHashTables, numberOfDimensions;
+    private int numberOfHashFunctions, numberOfHashTables, numberOfDimensions, nearestNeighborsToSearch;
     private double slotWidth;
     private boolean useEigenVectorsForHashing;
     private ImageIndex imageIndex;
     private JMenu searchMenu, settingsMenu;
-    private ImagePanel imagePanel;
+    private JPanel gui;
+    private JFileChooser fileChooser;
+    FilenameFilter fileNameFilter;
+    private JMenuBar menuBar;
+    private DefaultListModel model;
 
-    public LshUi() {
+    LshUi() {
+
         this.numberOfHashFunctions = DEFAULT_NUMBER_OF_HASHFUNCTIONS;
         this.numberOfHashTables = DEFAULT_NUMBER_OF_HASHTABLES;
         this.numberOfDimensions = DEFAULT_NUMBER_OF_DIMENSIONS;
         this.slotWidth = DEFAULT_SLOT_WIDTH;
         this.useEigenVectorsForHashing = DEFAULT_USE_EIGENVECTORS;
-    }
+        this.nearestNeighborsToSearch = DEFAULT_NEAREST_NEIGHBORS_TO_SEARCH;
 
-    /**
-     * Create the GUI and show it.  For thread safety,
-     * this method should be invoked from the
-     * event-dispatching thread.
-     */
-    private void createAndShowGUI() {
-        //Create and set up the window.
-        JFrame frame = new JFrame("Locality Sensitive Hashing - Image Similarity Search");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setResizable(true);
+        gui = new JPanel(new GridLayout());
 
-        //Create the menu bar.  Make it have a green background.
-        JMenuBar menuBar = new JMenuBar();
-        menuBar.setOpaque(true);
-        menuBar.setPreferredSize(new Dimension(DEFAULT_WIDTH, 20));
+        JPanel imageViewContainer = new JPanel(new GridBagLayout());
+        final JLabel imageView = new JLabel();
+        imageViewContainer.add(imageView);
 
-        //Create user menus
-        JMenu fileMenu, metricsMenu;
-        JMenuItem buildIndexMenuItem, loadIndexMenuItem, exitMenuItem, searchByUrlMenuItem, searchByFileMenuItem, numberOfHashFunctionsMenuItem, numberOfHashTablesMenuItem, numberOfDimensionsMenuItem, slotWidthMenuItem;
-        JCheckBoxMenuItem useEigenVectorHashCheckBoxMenuItem;
+        model = new DefaultListModel();
+        final JList imageList = new JList(model);
+        imageList.setCellRenderer(new IconCellRenderer());
+        ListSelectionListener listener = new ListSelectionListener() {
 
-        //File menu
-        fileMenu = new JMenu("File");
-        buildIndexMenuItem = new JMenuItem("Build Index");
+            @Override
+            public void valueChanged(ListSelectionEvent lse) {
+                Object o = imageList.getSelectedValue();
+                if (o instanceof BufferedImage) {
+                    imageView.setIcon(new ImageIcon((BufferedImage)o));
+                }
+            }
+
+        };
+        imageList.addListSelectionListener(listener);
+
+        fileChooser = new JFileChooser();
+        String[] imageTypes = ImageIO.getReaderFileSuffixes();
+        FileNameExtensionFilter fnf = new FileNameExtensionFilter("Images", imageTypes);
+        fileChooser.setFileFilter(fnf);
+        File userHome = new File(System.getProperty("user.home"));
+        fileChooser.setSelectedFile(userHome);
+
+
+
+        fileNameFilter = new FilenameFilter() {
+            @Override
+            public boolean accept(File file, String name) {
+                return true;
+            }
+        };
+
+        //Create user menus starting with File menu
+        menuBar = new JMenuBar();
+        JMenu fileMenu = new JMenu("File");
+        menuBar.add(fileMenu);
+
+        JMenuItem buildIndexMenuItem = new JMenuItem("Build Index");
         buildIndexMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {buildIndex();} });
         fileMenu.add(buildIndexMenuItem);
-        loadIndexMenuItem = new JMenuItem("Load Index");
+        JMenuItem loadIndexMenuItem = new JMenuItem("Load Index");
         loadIndexMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {loadIndex();} });
         fileMenu.add(loadIndexMenuItem);
-        exitMenuItem = new JMenuItem("Exit");
+        JMenuItem exitMenuItem = new JMenuItem("Exit");
         exitMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {System.exit(0);} });
         fileMenu.add(exitMenuItem);
         menuBar.add(fileMenu);
 
         //Search menu
         searchMenu = new JMenu("Search");
-        searchByUrlMenuItem = new JMenuItem("Search  by URL");
+        JMenuItem searchByUrlMenuItem = new JMenuItem("Search  by URL");
         searchByUrlMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {searchByUrl();} });
         searchMenu.add(searchByUrlMenuItem);
-        searchByFileMenuItem = new JMenuItem("Search  by Image File");
+        JMenuItem searchByFileMenuItem = new JMenuItem("Search  by Image File");
         searchByFileMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {searchByImageFile();} });
         searchMenu.add(searchByFileMenuItem);
         menuBar.add(searchMenu);
         searchMenu.setEnabled(false);
 
+
         //Settings menu
         settingsMenu = new JMenu("Settings");
-        numberOfHashFunctionsMenuItem = new JMenuItem("Set Number of Hash Functions");
+        JMenuItem numberOfHashFunctionsMenuItem = new JMenuItem("Set Number of Hash Functions");
         numberOfHashFunctionsMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {setNumberOfHashFunctions();} });
         settingsMenu.add(numberOfHashFunctionsMenuItem);
-        numberOfHashTablesMenuItem = new JMenuItem("Set Number of Hash Tables");
+        JMenuItem numberOfHashTablesMenuItem = new JMenuItem("Set Number of Hash Tables");
         numberOfHashTablesMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {setNumberOfHashTables();} });
         settingsMenu.add(numberOfHashTablesMenuItem);
-        numberOfDimensionsMenuItem = new JMenuItem("Set Number of Dimensions");
+        JMenuItem numberOfDimensionsMenuItem = new JMenuItem("Set Number of Dimensions");
         numberOfDimensionsMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {setNumberOfDimensions();} });
         settingsMenu.add(numberOfDimensionsMenuItem);
-        slotWidthMenuItem = new JMenuItem("Set Slot Width");
+        JMenuItem slotWidthMenuItem = new JMenuItem("Set Slot Width");
         slotWidthMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {setSlotWidth();} });
         settingsMenu.add(slotWidthMenuItem);
-        useEigenVectorHashCheckBoxMenuItem = new JCheckBoxMenuItem("Hash with Eigen Vectors");
+        JMenuItem useEigenVectorHashCheckBoxMenuItem = new JCheckBoxMenuItem("Hash with Eigen Vectors");
         useEigenVectorHashCheckBoxMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {toggleUseEigenVectors();} });
         settingsMenu.add(useEigenVectorHashCheckBoxMenuItem);
         menuBar.add(settingsMenu);
 
         //Metrics menu
-        metricsMenu = new JMenu("Metrics");
+        JMenu metricsMenu = new JMenu("Metrics");
         menuBar.add(metricsMenu);
 
-        //Set the menu bar and add the label to the content pane.
-        frame.setJMenuBar(menuBar);
-        this.imagePanel = this.new ImagePanel();
-        frame.getContentPane().add(this.imagePanel);
 
-        //Display the window.
-        frame.pack();
-        frame.setVisible(true);
-        this.imagePanel.setVisible(true);
+        gui.add(new JSplitPane(
+                JSplitPane.HORIZONTAL_SPLIT,
+                new JScrollPane(
+                        imageList,
+                        JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+                        JScrollPane.HORIZONTAL_SCROLLBAR_NEVER),
+                new JScrollPane(imageViewContainer)));
+    }
+
+    public void loadImages(List<SearchableObject> similarImages)  {
+
+        int imageCounter = 0, numberOfImagesToShow = Math.min(DEFAULT_MAX_SEARCH_RESULTS_TO_DISPLAY, similarImages.size());
+        BufferedImage[] images = new BufferedImage[numberOfImagesToShow];
+        model.removeAllElements();
+        BufferedImage image = null;
+
+        for (SearchableObject searchableObject : similarImages) {
+            if (imageCounter++ < numberOfImagesToShow) {
+                try {
+                    image = ImageIO.read(searchableObject.getObjectUrl());
+                    model.addElement(image);
+                } catch (Exception e) {}
+            } else {
+                break;
+            }
+        }
+    }
+
+    public Container getGui() {
+        return gui;
+    }
+
+    public JMenuBar getMenuBar() {
+        return menuBar;
     }
 
     /**
@@ -220,9 +274,10 @@ public class LshUi {
                 BufferedImage image = ImageIO.read(new URL(urlStringSuppliedByUser).openStream());
                 if (image == null) {
                     JOptionPane.showMessageDialog(null, "Could not obtain image from URL.");
+                } else {
+                    searchForImageInIndex(image);
+                    break;
                 }
-                searchForImageInIndex(image);
-                break;
             } catch (MalformedURLException e) {
                 JOptionPane.showMessageDialog(null, "MalformedURLException was caught. Could not obtain image from URL.");
             } catch (IOException e) {
@@ -235,16 +290,20 @@ public class LshUi {
     private void searchForImageInIndex(BufferedImage imageToSearch) {
 
         List<Double> imageFeatures = new FeatureFactory().imageHistogram(imageToSearch);
-        PerturbationSequences perturbationSequences = new PerturbationSequences(this.numberOfHashFunctions, this.slotWidth, NEAREST_NEIGHBORS_TO_SEARCH);
+        PerturbationSequences perturbationSequences = new PerturbationSequences(this.numberOfHashFunctions, this.slotWidth, this.nearestNeighborsToSearch);
         List<SearchableObject> kNearestNeighbors = getMultiProbeNearestNeighbors(imageFeatures, perturbationSequences.getPerturbations());
-        this.imagePanel.setImagesToDisplay(kNearestNeighbors);
-        this.imagePanel.repaint();
+        if (kNearestNeighbors.size() == 0) {
+            JOptionPane.showMessageDialog(null, "No matches found.");
+        } else {
+            loadImages(kNearestNeighbors);
+        }
+
     }
 
 
-    private List<SearchableObject> getMultiProbeNearestNeighbors(List<Double> queryVector, List<Perturbation> perturbations)
+    private java.util.List<SearchableObject> getMultiProbeNearestNeighbors(java.util.List<Double> queryVector, java.util.List<Perturbation> perturbations)
     {
-        PerturbationSequenceMapping runMultiProbe = new PerturbationSequenceMapping(this.numberOfHashFunctions, this.slotWidth, NEAREST_NEIGHBORS_TO_SEARCH, this.numberOfHashTables, this.imageIndex.getImageIndex(), queryVector, perturbations);
+        PerturbationSequenceMapping runMultiProbe = new PerturbationSequenceMapping(this.numberOfHashFunctions, this.slotWidth, this.nearestNeighborsToSearch, this.numberOfHashTables, this.imageIndex.getImageIndex(), queryVector, perturbations);
         return removeDuplicates(runMultiProbe.getQueryResults());
     }
 
@@ -396,43 +455,68 @@ public class LshUi {
 
     }
 
-    //Panel to show images
-    private class ImagePanel extends JPanel {
-
-        private List<SearchableObject> imagesToDisplay;
-
-        public ImagePanel() {
-            this.imagesToDisplay = new ArrayList<SearchableObject>();
-            setPreferredSize(new Dimension(DEFAULT_WIDTH, DEFAULT_HEIGHT));
-        }
-
-        public void setImagesToDisplay(List<SearchableObject> imagesToDisplay) {
-            this.imagesToDisplay = imagesToDisplay;
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            try {
-                for (SearchableObject searchableObject : imagesToDisplay) {
-                    super.paintComponent(g);
-                    g.drawImage(ImageIO.read(searchableObject.getObjectUrl()), 0, 0, this);
-                }
-            } catch (IOException e) {
-            }
-        }
-
-    }
-
     public static void main(String[] args) {
-        //Schedule a job for the event-dispatching thread:
-        //creating and showing this application's GUI.
-        javax.swing.SwingUtilities.invokeLater(new Runnable() {
+        SwingUtilities.invokeLater(new Runnable(){
+            @Override
             public void run() {
-                new LshUi().createAndShowGUI();
+                LshUi imageList = new LshUi();
+
+                JFrame f = new JFrame("Locality Sensitive Hashing - Image Similarity Search");
+                f.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                f.add(imageList.getGui());
+                f.setJMenuBar(imageList.getMenuBar());
+                f.setLocationByPlatform(true);
+                f.pack();
+                f.setSize(800,600);
+                f.setVisible(true);
             }
         });
     }
+}
 
+class IconCellRenderer extends DefaultListCellRenderer {
+
+    private static final long serialVersionUID = 1L;
+
+    private int size;
+    private BufferedImage icon;
+
+    IconCellRenderer() {
+        this(100);
+    }
+
+    IconCellRenderer(int size) {
+        this.size = size;
+        icon = new BufferedImage(size,size,BufferedImage.TYPE_INT_ARGB);
+    }
+
+    @Override
+    public Component getListCellRendererComponent(
+            JList list,
+            Object value,
+            int index,
+            boolean isSelected,
+            boolean cellHasFocus) {
+        Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+        if (c instanceof JLabel && value instanceof BufferedImage) {
+            JLabel l = (JLabel)c;
+            l.setText("");
+            BufferedImage i = (BufferedImage)value;
+            l.setIcon(new ImageIcon(icon));
+
+            Graphics2D g = icon.createGraphics();
+            g.setColor(new Color(0,0,0,0));
+            g.clearRect(0, 0, size, size);
+            g.drawImage(i,0,0,size,size,this);
+
+            g.dispose();
+        }
+        return c;
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+        return new Dimension(size, size);
+    }
 
 }

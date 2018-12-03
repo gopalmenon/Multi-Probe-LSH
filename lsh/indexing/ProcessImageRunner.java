@@ -7,17 +7,20 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.net.URL;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
 public class ProcessImageRunner extends Thread {
 
     URL url;
     String id;
     ImageIndex parent;
+    Semaphore s;
 
-    public ProcessImageRunner(String id, URL url, ImageIndex parent){
+    public ProcessImageRunner(String id, URL url, ImageIndex parent, Semaphore s){
         this.url = url;
         this.id = id;
         this.parent = parent;
+        this.s = s;
     }
 
     @Override
@@ -38,5 +41,7 @@ public class ProcessImageRunner extends Thread {
                 System.err.println(trace);
             }
         }
+
+        s.release();
     }
 }

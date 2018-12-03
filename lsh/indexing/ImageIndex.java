@@ -15,11 +15,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
-import javax.imageio.ImageIO;
+import java.util.concurrent.*;
 
 import com.opencsv.*;
 
@@ -70,6 +66,8 @@ public class ImageIndex implements Serializable {
 				hashtable.add(object);
 			}
 		}
+
+		System.out.println("number of features: "+ rawFeatureVectors.size());
 	}
 	
 	private void createHashTables() {
@@ -162,7 +160,10 @@ public class ImageIndex implements Serializable {
 	private void createImageIndex() {
 		URL imageUrl = null;
 		int availableCoresForThreads = Runtime.getRuntime().availableProcessors() / 2;
-		ExecutorService pool = Executors.newFixedThreadPool(availableCoresForThreads);
+		ThreadPoolExecutor pool = (ThreadPoolExecutor)Executors.newFixedThreadPool(availableCoresForThreads);
+		Semaphore s = new Semaphore(0);
+
+		int count = 0;
 
 		try {
 			final CSVParser parser =
@@ -176,7 +177,8 @@ public class ImageIndex implements Serializable {
 							.build();
 			String[] fileLine = reader.readNext();
 			while (fileLine != null) {
-
+				count = count + 1;
+				System.out.println("Number of processed lines is: " + count);
 				//Download the image
 				try {
 					// first element is the id of the image, second element is the url of the image
@@ -192,16 +194,22 @@ public class ImageIndex implements Serializable {
 					continue;
 				}
 
-					ProcessImageRunner runner = new ProcessImageRunner(fileLine[0], imageUrl, this);
+					ProcessImageRunner runner = new ProcessImageRunner(fileLine[0], imageUrl, this, s);
 					pool.execute(runner);
 					fileLine = reader.readNext();
 			}
 
-				reader.close();
-				pool.shutdown();
-				pool.awaitTermination(2, TimeUnit.MINUTES);
-		} catch (java.lang.InterruptedException e) {
-			System.out.println("Timeout from the threadpool.");
+			System.out.println("pool completed task count size: " +pool.getCompletedTaskCount());
+			System.out.println("pool task count size: " +pool.getTaskCount());
+			System.out.println("pool getPoolSize: " +pool.getPoolSize());
+			System.out.println("pool getActiveCount: " +pool.getActiveCount());
+			reader.close();
+			pool.shutdown();
+			s.acquire(count);
+		}
+		catch (java.lang.InterruptedException e) {
+			// If thread is interrupted it should exit the semaphore lock.
+			pool.shutdownNow();
 			e.printStackTrace();
 		}
 		catch (FileNotFoundException e) {

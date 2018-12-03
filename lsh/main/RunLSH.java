@@ -22,6 +22,7 @@ public class RunLSH {
 	public static final String USER_QUIT_INPUT = "Quit";
 	
 	private ImageIndex imageIndex;
+	// TODO: should consume this from some sort of config object or cli
 	private int NUMBER_OF_DIMENSIONS = 120;
 	private int NUMBER_OF_HASHFUNCTIONS = 10;
 	private int NUMBER_OF_HASHTABLES = 10;

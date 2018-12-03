@@ -4,6 +4,7 @@ import images.FeatureFactory;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.EigenDecomposition;
 import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
@@ -14,13 +15,19 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
+
+import com.opencsv.*;
 
 public class ImageIndex implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
-	public static final String IMAGE_URLS = "data/image_urls.txt";
+	// Default to the first image file in the provided data directory
+	public static final String IMAGE_URLS = "image_data/images/file_1";
 	public static final String SAVED_INDEX_FILE = "lsh/test/test_storage.ser";
 	
 	private int numberOfHashFunctions;
@@ -33,8 +40,7 @@ public class ImageIndex implements Serializable {
 	private List<SearchableObject> rawFeatureVectors;
 	private List<HashTable> hashTables;
 	private Random randomNumberGenerator;
-	private boolean secondPass;
-	
+
 	public ImageIndex(int numberOfHashFunctions, int numberOfHashTables, int numberOfImageFeatures, double slotWidth, boolean useEigenVectorsToHash, File imageUrls, boolean test) {
 		this.numberOfHashFunctions = numberOfHashFunctions;
 		this.numberOfHashTables = numberOfHashTables;
@@ -50,22 +56,20 @@ public class ImageIndex implements Serializable {
 		this.imageFeatures = new HashMap<URL, List<Double>>();
 		this.rawFeatureVectors = new ArrayList<>();
 		this.randomNumberGenerator = new Random();
-		this.secondPass = false;
 
-		// If we are using eigenvectors, we must sweep through the data once, find the eigenvalues,
-		// then make a second pass to begin hashing.
-
-		if (test)
+		if (test) {
 			createTestImageIndex();
-		else
+		}
+		else {
 			createImageIndex();
-		createHashTables();
-		for (HashTable hashtable: this.hashTables)
-			for (SearchableObject object: this.rawFeatureVectors)
-				hashtable.add(object);
+		}
 
-		int x = 3;
-		int y = x + 3;
+		createHashTables();
+		for (HashTable hashtable: this.hashTables){
+			for (SearchableObject object: this.rawFeatureVectors) {
+				hashtable.add(object);
+			}
+		}
 	}
 	
 	private void createHashTables() {
@@ -153,38 +157,54 @@ public class ImageIndex implements Serializable {
 	
 	/**
 	 * Read image urls, extract image features and put the image in its bucket
+	 * expected format for the file is a csv of <id>,<url> for each line
 	 */
 	private void createImageIndex() {
 		URL imageUrl = null;
+		int availableCoresForThreads = Runtime.getRuntime().availableProcessors() / 2;
+		ExecutorService pool = Executors.newFixedThreadPool(availableCoresForThreads);
 
 		try {
-			BufferedReader bufferedReader = new BufferedReader(new FileReader(this.imageUrls));
-			String fileLine = bufferedReader.readLine();
+			final CSVParser parser =
+					new CSVParserBuilder()
+							.withSeparator('\t')
+							.withIgnoreQuotations(true)
+							.build();
+			final CSVReader reader =
+					new CSVReaderBuilder(new FileReader(this.imageUrls))
+							.withCSVParser(parser)
+							.build();
+			String[] fileLine = reader.readNext();
 			while (fileLine != null) {
 
 				//Download the image
 				try {
-					imageUrl = new URL(fileLine.trim());
+					// first element is the id of the image, second element is the url of the image
+					String id = fileLine[0];
+					String url = fileLine[1];
+					imageUrl = new URL(url);
 				} catch (Exception e) {
-					System.err.println("Error processing url " + fileLine + ". File skipped.");
+					System.err.println("Error loading url [id]: url " + "["+ fileLine[0] + "]:" + fileLine[1] + ". Exception: "+e.getMessage()+ ":" + ExceptionUtils.getRootCause(e) + ". File skipped.");
+					String[] stackTrace = ExceptionUtils.getRootCauseStackTrace(e);
+					for(String trace : stackTrace) {
+						System.err.println(trace);
+					}
 					continue;
 				}
-				try {
-					BufferedImage image = ImageIO.read(imageUrl.openStream());
-					//Create color histogram for the image
-					List<Double> imageFeatures = new FeatureFactory().imageHistogram(image);
-					//Store the image features for later use
-					this.imageFeatures.put(imageUrl, imageFeatures);
-					this.rawFeatureVectors.add(new SearchableObject(imageFeatures, imageUrl));
-				} catch (Exception e) {
-					System.err.println("Error reading " + fileLine + ". File skipped.");
-				}
-				
 
-				fileLine = bufferedReader.readLine();
+					ProcessImageRunner runner = new ProcessImageRunner(fileLine[0], imageUrl, this);
+					pool.execute(runner);
+					fileLine = reader.readNext();
 			}
-			bufferedReader.close();
-		} catch (FileNotFoundException e) {
+
+				reader.close();
+				pool.shutdown();
+				pool.awaitTermination(2, TimeUnit.MINUTES);
+		} catch (java.lang.InterruptedException e) {
+			System.out.println("Timeout from the threadpool.");
+			e.printStackTrace();
+		}
+		catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -194,7 +214,6 @@ public class ImageIndex implements Serializable {
 	/**
 	 * Similar method for testing with simple data
 	 */
-//	private List<SearchableObject> createTestImageIndex() {
 	private void createTestImageIndex() {
 		File file = new File("lsh/test/test_data.txt");
 
@@ -220,8 +239,14 @@ public class ImageIndex implements Serializable {
 
 	
 	public List<HashTable> getImageIndex() { return this.hashTables; }
-	
-	public Map<URL, List<Double>> getImageFeatures() {	return this.imageFeatures; }
 
 	public List<SearchableObject> getRawFeatureVectors() {return this.rawFeatureVectors; }
+
+	public void putImageFeatures(URL imageUrl, List<Double> imageFeatures) {
+		this.imageFeatures.put(imageUrl, imageFeatures);
+	}
+
+	public void putRawFeatureVectors(SearchableObject obj) {
+		this.rawFeatureVectors.add(obj);
+	}
 }

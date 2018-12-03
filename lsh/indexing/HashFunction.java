@@ -27,7 +27,11 @@ public class HashFunction implements Serializable {
 		for (int dimensionCounter = 0; dimensionCounter < numberOfDimensions; ++dimensionCounter) {
 			this.hashFunctionCoefficients.add(Double.valueOf(randomNumberGenerator.nextGaussian()));
 		}
-		
+
+		// TODO i believe the offset is incorrect
+		//		the slotWidthW multiplication scales it and then is immediately countered during the calculation on
+		//		line 66. essentially we are just multiplying by a very very small real between 0,1 which i think
+		//		skews the results since our offsets are not large enough. the paper states offset is between [0,w]
 		this.offset = randomNumberGenerator.nextDouble() * slotWidthW;
 		this.slotWidthW = slotWidthW;
 		

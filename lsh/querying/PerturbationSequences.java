@@ -92,6 +92,7 @@ public class PerturbationSequences {
 
     private void generateRandomPerturbations(int numberOfPerturbations) {
 
+
         PriorityQueue<Perturbation> perturbations = new PriorityQueue<Perturbation>();
         List<Perturbation> randomPerturbations = new ArrayList<Perturbation>(numberOfPerturbations);
         List<Integer> initialPerturbationVector = Arrays.asList(Integer.valueOf(1));

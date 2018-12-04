@@ -1,18 +1,14 @@
 package indexing;
 
 import images.FeatureFactory;
+import images.SerializableHistogram;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.EigenDecomposition;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.Serializable;
+import java.io.*;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.*;
@@ -32,10 +28,31 @@ public class ImageIndex implements Serializable {
 	private double slotWidth;
 	private boolean useEigenVectorsToHash;
 	private File imageUrls;
-	private Map<URL, List<Double>> imageFeatures;
 	private List<SearchableObject> rawFeatureVectors;
 	private List<HashTable> hashTables;
 	private Random randomNumberGenerator;
+
+	public ImageIndex(int numberOfHashFunctions, int numberOfHashTables, int numberOfImageFeatures, double slotWidth, boolean useEigenVectorsToHash, File featuresFile) {
+		this.numberOfHashFunctions = numberOfHashFunctions;
+		this.numberOfHashTables = numberOfHashTables;
+		this.numberOfImageFeatures = numberOfImageFeatures;
+		this.slotWidth = slotWidth;
+		this.useEigenVectorsToHash = useEigenVectorsToHash;
+		this.hashTables = new ArrayList<>(this.numberOfHashTables);
+		this.rawFeatureVectors = new ArrayList<>();
+		this.randomNumberGenerator = new Random();
+
+		createImageIndexFromFeatureFile(featuresFile);
+		createHashTables();
+
+		for (HashTable hashtable: this.hashTables){
+			for (SearchableObject object: this.rawFeatureVectors) {
+				hashtable.add(object);
+			}
+		}
+
+		System.out.println("number of features: "+ rawFeatureVectors.size());
+	}
 
 	public ImageIndex(int numberOfHashFunctions, int numberOfHashTables, int numberOfImageFeatures, double slotWidth, boolean useEigenVectorsToHash, File imageUrls, boolean test) {
 		this.numberOfHashFunctions = numberOfHashFunctions;
@@ -49,7 +66,6 @@ public class ImageIndex implements Serializable {
 			this.imageUrls = new File(IMAGE_URLS);
 		}
 		this.hashTables = new ArrayList<HashTable>(this.numberOfHashTables);
-		this.imageFeatures = new HashMap<URL, List<Double>>();
 		this.rawFeatureVectors = new ArrayList<>();
 		this.randomNumberGenerator = new Random();
 
@@ -68,6 +84,18 @@ public class ImageIndex implements Serializable {
 		}
 
 		System.out.println("number of features: "+ rawFeatureVectors.size());
+		try {
+			File file = File.createTempFile("saved", "features", new File(System.getProperty("user.home")));
+			FileOutputStream savedIndexFile = new FileOutputStream(file);
+			ObjectOutputStream out = new ObjectOutputStream(savedIndexFile);
+			out.writeObject(this.rawFeatureVectors);
+			out.close();
+			savedIndexFile.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		System.out.println("Saved rawFeatureVectors to file: "+ rawFeatureVectors.size());
 	}
 	
 	private void createHashTables() {
@@ -180,29 +208,14 @@ public class ImageIndex implements Serializable {
 				count = count + 1;
 				System.out.println("Number of processed lines is: " + count);
 				//Download the image
-				try {
-					// first element is the id of the image, second element is the url of the image
-					String id = fileLine[0];
-					String url = fileLine[1];
-					imageUrl = new URL(url);
-				} catch (Exception e) {
-					System.err.println("Error loading url [id]: url " + "["+ fileLine[0] + "]:" + fileLine[1] + ". Exception: "+e.getMessage()+ ":" + ExceptionUtils.getRootCause(e) + ". File skipped.");
-					String[] stackTrace = ExceptionUtils.getRootCauseStackTrace(e);
-					for(String trace : stackTrace) {
-						System.err.println(trace);
-					}
-					continue;
-				}
+				String id = fileLine[0];
+				String url = fileLine[1];
 
-					ProcessImageRunner runner = new ProcessImageRunner(fileLine[0], imageUrl, this, s);
-					pool.execute(runner);
-					fileLine = reader.readNext();
+				ProcessImageRunner runner = new ProcessImageRunner(id, url, this, s);
+				pool.execute(runner);
+				fileLine = reader.readNext();
 			}
 
-			System.out.println("pool completed task count size: " +pool.getCompletedTaskCount());
-			System.out.println("pool task count size: " +pool.getTaskCount());
-			System.out.println("pool getPoolSize: " +pool.getPoolSize());
-			System.out.println("pool getActiveCount: " +pool.getActiveCount());
 			reader.close();
 			pool.shutdown();
 			s.acquire(count);
@@ -213,6 +226,25 @@ public class ImageIndex implements Serializable {
 			e.printStackTrace();
 		}
 		catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Read image urls, extract image features and put the image in its bucket
+	 * expected format for the file is a csv of <id>,<url> for each line
+	 */
+	private void createImageIndexFromFeatureFile(File file) {
+		try {
+			FileInputStream savedIndexFile = new FileInputStream(file);
+			ObjectInputStream in = new ObjectInputStream(savedIndexFile);
+			this.rawFeatureVectors = (List<SearchableObject>)in.readObject();
+			in.close();
+			savedIndexFile.close();
+		}
+		catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -237,7 +269,7 @@ public class ImageIndex implements Serializable {
 				for (int i = 0; i < this.numberOfImageFeatures; i++) {
 					vector.add(Double.parseDouble(elements[i]));
 				}
-				this.rawFeatureVectors.add(new SearchableObject(vector, null));
+				this.rawFeatureVectors.add(new SearchableObject(new SerializableHistogram(vector, null, null)));
 			}
             br.close();
         } catch(IOException e) {
@@ -245,14 +277,9 @@ public class ImageIndex implements Serializable {
 		}
 	}
 
-	
 	public List<HashTable> getImageIndex() { return this.hashTables; }
 
 	public List<SearchableObject> getRawFeatureVectors() {return this.rawFeatureVectors; }
-
-	public void putImageFeatures(URL imageUrl, List<Double> imageFeatures) {
-		this.imageFeatures.put(imageUrl, imageFeatures);
-	}
 
 	public void putRawFeatureVectors(SearchableObject obj) {
 		this.rawFeatureVectors.add(obj);

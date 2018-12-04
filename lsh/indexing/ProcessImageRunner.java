@@ -1,6 +1,7 @@
 package indexing;
 
 import images.FeatureFactory;
+import images.SerializableHistogram;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import javax.imageio.ImageIO;
@@ -11,13 +12,13 @@ import java.util.concurrent.Semaphore;
 
 public class ProcessImageRunner extends Thread {
 
-    URL url;
+    String urlString;
     String id;
     ImageIndex parent;
     Semaphore s;
 
-    public ProcessImageRunner(String id, URL url, ImageIndex parent, Semaphore s){
-        this.url = url;
+    public ProcessImageRunner(String id, String url, ImageIndex parent, Semaphore s){
+        this.urlString = url;
         this.id = id;
         this.parent = parent;
         this.s = s;
@@ -26,16 +27,14 @@ public class ProcessImageRunner extends Thread {
     @Override
     public void run() {
         try {
-            BufferedImage image = ImageIO.read(this.url.openStream());
             //Create color histogram for the image
-            List<Double> imageFeatures = new FeatureFactory().imageHistogram(image);
+            SerializableHistogram imageFeatures = new FeatureFactory().imageHistogram(urlString, id);
             //Store the image features for later use
             synchronized (parent) {
-                parent.putImageFeatures(url, imageFeatures);
-                parent.putRawFeatureVectors(new SearchableObject(imageFeatures, url));
+                parent.putRawFeatureVectors(new SearchableObject(imageFeatures));
             }
         } catch (Exception e) {
-            System.err.println("Error processing [id]: url " + "[" + id + "]:" + url.toString() + ". Exception: " + e.getMessage() + ":" + ExceptionUtils.getRootCause(e) + ". File skipped.");
+            System.err.println("Error processing [id]: url " + "[" + id + "]:" + urlString + ". Exception: " + e.getMessage() + ":" + ExceptionUtils.getRootCause(e) + ". File skipped.");
             String[] stackTrace = ExceptionUtils.getRootCauseStackTrace(e);
             for (String trace : stackTrace) {
                 System.err.println(trace);

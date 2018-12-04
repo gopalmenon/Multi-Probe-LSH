@@ -1,6 +1,9 @@
 package indexing;
 
+import images.SerializableHistogram;
+
 import java.io.Serializable;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
@@ -12,11 +15,15 @@ public class SearchableObject implements Serializable{
 	 */
 	private static final long serialVersionUID = 5L;
 	private List<Double> objectFeatures;
-	private final URL objectUrl;
+	private URL objectUrl;
 	
-	public SearchableObject(List<Double> objectFeatures, URL objectUrl) {
-		this.objectFeatures = objectFeatures;
-		this.objectUrl = objectUrl;
+	public SearchableObject(SerializableHistogram h) {
+		this.objectFeatures = h.features;
+		try {
+			this.objectUrl = new URL(h.url);
+		} catch (MalformedURLException e) {
+			// idk
+		}
 	}
 	
 

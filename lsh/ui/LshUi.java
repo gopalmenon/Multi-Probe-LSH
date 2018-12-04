@@ -176,7 +176,6 @@ public class LshUi {
         BufferedImage image = null;
 
         List<SearchableObject> sortedImages = getSortedResults(similarImages, imageToSearchFeatures);
-        this.lastUrlSearchResults = sortedImages;
         for (SearchableObject searchableObject : sortedImages) {
             if (imageCounter++ < numberOfImagesToShow) {
                 try {
@@ -356,6 +355,7 @@ public class LshUi {
         List<Double> imageFeatures = new FeatureFactory().imageHistogram(imageToSearch);
         PerturbationSequences perturbationSequences = new PerturbationSequences(this.numberOfHashFunctions, this.slotWidth, this.nearestNeighborsToSearch);
         List<SearchableObject> kNearestNeighbors = getMultiProbeNearestNeighbors(imageFeatures, perturbationSequences.getPerturbations());
+        this.lastUrlSearchResults = kNearestNeighbors;
         if (kNearestNeighbors.size() == 0) {
             JOptionPane.showMessageDialog(null, "No matches found.");
         } else {

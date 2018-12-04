@@ -3,6 +3,7 @@ package ui;
 import images.FeatureFactory;
 import indexing.ImageIndex;
 import indexing.SearchableObject;
+import querying.SearchableObjectComparator;
 import querying.Perturbation;
 import querying.PerturbationSequenceMapping;
 import querying.PerturbationSequences;
@@ -13,6 +14,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collections;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -120,9 +122,11 @@ public class LshUi {
         JMenuItem searchByFileMenuItem = new JMenuItem("Search  by Image File");
         searchByFileMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {searchByImageFile();} });
         searchMenu.add(searchByFileMenuItem);
+        JMenuItem bruteForceSearchByUrlMenuItem = new JMenuItem("Brute Force Search  by URL");
+        bruteForceSearchByUrlMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {bruteForceSearchByUrl();} });
+        searchMenu.add(bruteForceSearchByUrlMenuItem);
         menuBar.add(searchMenu);
         searchMenu.setEnabled(false);
-
 
         //Settings menu
         settingsMenu = new JMenu("Settings");
@@ -157,14 +161,16 @@ public class LshUi {
                 new JScrollPane(imageViewContainer)));
     }
 
-    public void loadImages(List<SearchableObject> similarImages)  {
+    private void loadImages(List<SearchableObject> similarImages, List<Double> imageToSearchFeatures)  {
 
         int imageCounter = 0, numberOfImagesToShow = Math.min(this.nearestNeighborsToSearch, similarImages.size());
         BufferedImage[] images = new BufferedImage[numberOfImagesToShow];
         model.removeAllElements();
         BufferedImage image = null;
 
-        for (SearchableObject searchableObject : similarImages) {
+        List<SearchableObject> sortedImages = getSortedResults(similarImages, imageToSearchFeatures);
+
+        for (SearchableObject searchableObject : sortedImages) {
             if (imageCounter++ < numberOfImagesToShow) {
                 try {
                     image = ImageIO.read(searchableObject.getObjectUrl());
@@ -174,6 +180,19 @@ public class LshUi {
                 break;
             }
         }
+    }
+
+    /**
+     * Sort the query result by increasing distance from query object
+     * @param similarImages
+     * @return
+     */
+    private List<SearchableObject> getSortedResults(List<SearchableObject> similarImages, List<Double> imageToSearchFeatures) {
+
+        SearchableObjectComparator resultsComparator = new SearchableObjectComparator(new SearchableObject(imageToSearchFeatures, null));
+        Collections.sort(similarImages, resultsComparator);
+        return similarImages;
+
     }
 
     public Container getGui() {
@@ -290,6 +309,38 @@ public class LshUi {
 
     }
 
+    private void bruteForceSearchByUrl() {
+
+        String urlStringSuppliedByUser = null;
+        while(true) {
+            urlStringSuppliedByUser = JOptionPane.showInputDialog("ImageURL: ");
+            if (urlStringSuppliedByUser == null) {
+                break;
+            }
+            try {
+                BufferedImage image = ImageIO.read(new URL(urlStringSuppliedByUser).openStream());
+                if (image == null) {
+                    JOptionPane.showMessageDialog(null, "Could not obtain image from URL.");
+                } else {
+                    List<Double> imageFeatures = new FeatureFactory().imageHistogram(image);
+                    List<SearchableObject>  searchResults = getRawKNeaerestNeighbors(imageFeatures);
+                    if (searchResults.size() == 0) {
+                        JOptionPane.showMessageDialog(null, "No matches found.");
+                    } else {
+                        loadImages(searchResults, imageFeatures);
+                    }
+                    break;
+                }
+            } catch (MalformedURLException e) {
+                JOptionPane.showMessageDialog(null, "MalformedURLException was caught. Could not obtain image from URL.");
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(null, "IOException was caught. Could read in the image from URL.");
+            }
+        }
+
+
+    }
+
     private void searchForImageInIndex(BufferedImage imageToSearch) {
 
         List<Double> imageFeatures = new FeatureFactory().imageHistogram(imageToSearch);
@@ -298,7 +349,7 @@ public class LshUi {
         if (kNearestNeighbors.size() == 0) {
             JOptionPane.showMessageDialog(null, "No matches found.");
         } else {
-            loadImages(kNearestNeighbors);
+            loadImages(kNearestNeighbors, imageFeatures);
         }
 
     }
@@ -347,6 +398,35 @@ public class LshUi {
             JOptionPane.showMessageDialog(null, "IOException was caught. Could not process selected file as image.");
         }
 
+
+    }
+
+
+    // Return raw nearest neighbors without yet hashing
+    private List<SearchableObject> getRawKNeaerestNeighbors(List<Double> vector)
+    {
+        List<SearchableObject> data = this.imageIndex.getRawFeatureVectors();
+
+        List<SearchableObject> KNearestNeighbors = new ArrayList<SearchableObject>();
+        List<Double> MAX_VECTOR = new ArrayList<Double>();
+        for (int i = 0; i < this.numberOfDimensions; i++)
+            MAX_VECTOR.add(Double.MAX_VALUE);
+
+        // Find K-Nearest Neighbors
+        for (int i = 0; i < this.nearestNeighborsToSearch; i++) {
+            SearchableObject min_vector = new SearchableObject(MAX_VECTOR, null);
+
+            SearchableObject queryObject = new SearchableObject(vector, null);
+            for (SearchableObject object : data) {
+                if ((object.distanceTo(queryObject) < min_vector.distanceTo(queryObject)) &&
+                        (!KNearestNeighbors.contains(object)))  {
+                    min_vector = new SearchableObject(object.getObjectFeatures(), object.getObjectUrl());
+                }
+            }
+
+            KNearestNeighbors.add(min_vector);
+        }
+        return removeDuplicates(KNearestNeighbors);
 
     }
 

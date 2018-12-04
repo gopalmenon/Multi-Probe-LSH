@@ -1,6 +1,7 @@
 package ui;
 
 import images.FeatureFactory;
+import images.ImageDaemon;
 import images.SerializableHistogram;
 import indexing.ImageIndex;
 import indexing.SearchableObject;
@@ -623,6 +624,12 @@ public class LshUi {
     }
 
     public static void main(String[] args) {
+//        if you need to collect more features change classes as appropriately
+//        ImageDaemon i = new ImageDaemon();
+//        i.collectImages();
+//        System.out.println("****** Daemon finished!");
+
+
         SwingUtilities.invokeLater(new Runnable(){
             @Override
             public void run() {
@@ -638,6 +645,7 @@ public class LshUi {
                 f.setVisible(true);
             }
         });
+
     }
 }
 

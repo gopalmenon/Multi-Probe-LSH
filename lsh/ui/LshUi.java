@@ -423,14 +423,16 @@ public class LshUi {
         double commonDocumentCount = tempBruteForceSearchResults.size();
 
         StringBuffer metricsMessage = new StringBuffer();
+
+        metricsMessage.append("Relevant images count: " + this.lastBruteForceSearchResults.size() + "\n");
+        metricsMessage.append("Retrieved images count: " + this.lastUrlSearchResults.size() + "\n");
+
         if (this.lastUrlSearchResults.size() > 0) {
             double precision = commonDocumentCount / this.lastUrlSearchResults.size();
-            metricsMessage.append("Precision: " + precision);
+            metricsMessage.append("Precision: " + precision + "\n");
         } else {
-            metricsMessage.append("Precision could not be computed as URL search retrieved no images");
+            metricsMessage.append("Precision could not be computed as URL search retrieved no images" + "\n");
         }
-
-        metricsMessage.append("\n\n");
 
         if (this.lastBruteForceSearchResults.size() > 0) {
             double recall = commonDocumentCount / this.lastBruteForceSearchResults.size();

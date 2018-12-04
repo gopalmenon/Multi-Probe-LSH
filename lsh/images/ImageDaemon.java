@@ -68,6 +68,7 @@ public class ImageDaemon {
             pool.shutdown();
             s.acquire(count);
             System.out.println("Semaphore complete. *********");
+            // TODO individual writes might be useful / quicker
             this.putToFile();
         }
         catch (java.lang.InterruptedException e) {
@@ -88,7 +89,7 @@ public class ImageDaemon {
         System.out.println("Missing "+ this.missingCount + " features.");
         try {
             File file = new File("featuresFromDaemon.set");
-            FileOutputStream savedIndexFile = new FileOutputStream(file, true);
+            FileOutputStream savedIndexFile = new FileOutputStream(file);
             ObjectOutputStream out = new ObjectOutputStream(savedIndexFile);
             out.writeObject(this.objects);
             out.close();

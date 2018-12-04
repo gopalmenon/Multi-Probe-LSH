@@ -11,6 +11,7 @@ import java.util.ArrayList;
 
 public class FeatureFactory implements Serializable {
 
+    // TODO these should be dynamically determined
     public static final int HISTOGRAM_SLOTS_PER_BAND = 60;
     public static final int NUMBER_OF_BANDS_USED = 3;
 
@@ -34,17 +35,16 @@ public class FeatureFactory implements Serializable {
             Graphics2D g = newImage.createGraphics();
             g.drawImage(image, 0, 0, null);
             g.dispose();
-           // newImage.getRGB(1,2);
             return newImage;
         } catch (IOException e) {
             System.out.println("The image was not loaded.");
             return null;
-            //System.exit(1);
         }
     }
 
     public List<Double> imageHistogram(BufferedImage image){
-        Histogram hist = new Histogram(HISTOGRAM_SLOTS_PER_BAND, 0, HISTOGRAM_SLOTS_PER_BAND, image.getRaster().getNumBands());
+        // TODO: originally image.getRaster().getNumBands() but would be uneven number of features, should use 3 and hope it goes well?
+        Histogram hist = new Histogram(HISTOGRAM_SLOTS_PER_BAND, 0, HISTOGRAM_SLOTS_PER_BAND, 3);
         hist.countPixels(image.getRaster(), null, 0, 0, 1, 1);
         int[][] bins = hist.getBins();
         List<Double> histList = new ArrayList<Double>(NUMBER_OF_BANDS_USED * HISTOGRAM_SLOTS_PER_BAND);

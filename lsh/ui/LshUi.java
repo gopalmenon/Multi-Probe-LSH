@@ -47,6 +47,9 @@ public class LshUi {
     private DefaultListModel model;
 
     LshUi() {
+        // otherwise http read timeouts take forever
+        System.setProperty("sun.net.client.defaultReadTimeout", "1000");
+        System.setProperty("sun.net.client.defaultConnectTimeout", "1000");
 
         this.numberOfHashFunctions = DEFAULT_NUMBER_OF_HASHFUNCTIONS;
         this.numberOfHashTables = DEFAULT_NUMBER_OF_HASHTABLES;
@@ -156,7 +159,7 @@ public class LshUi {
 
     public void loadImages(List<SearchableObject> similarImages)  {
 
-        int imageCounter = 0, numberOfImagesToShow = Math.min(DEFAULT_MAX_SEARCH_RESULTS_TO_DISPLAY, similarImages.size());
+        int imageCounter = 0, numberOfImagesToShow = Math.min(this.nearestNeighborsToSearch, similarImages.size());
         BufferedImage[] images = new BufferedImage[numberOfImagesToShow];
         model.removeAllElements();
         BufferedImage image = null;

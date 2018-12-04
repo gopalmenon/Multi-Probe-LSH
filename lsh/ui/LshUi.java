@@ -47,6 +47,8 @@ public class LshUi {
     FilenameFilter fileNameFilter;
     private JMenuBar menuBar;
     private DefaultListModel model;
+    private String lastUrlSearchString, lastButeForceSearchString;
+    private List<SearchableObject> lastUrlSearchResults, lastBruteForceSearchResults;
 
     LshUi() {
         // otherwise http read timeouts take forever
@@ -149,6 +151,9 @@ public class LshUi {
 
         //Metrics menu
         JMenu metricsMenu = new JMenu("Metrics");
+        JMenuItem showMetricsMenuItem = new JMenuItem("Show Metrics");
+        showMetricsMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {displayMetricsDialog();} });
+        metricsMenu.add(showMetricsMenuItem);
         menuBar.add(metricsMenu);
 
 
@@ -159,6 +164,11 @@ public class LshUi {
                         JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
                         JScrollPane.HORIZONTAL_SCROLLBAR_NEVER),
                 new JScrollPane(imageViewContainer)));
+
+        this.lastUrlSearchString = null;
+        this.lastButeForceSearchString = null;
+        this.lastUrlSearchResults = null;
+        this.lastBruteForceSearchResults = null;
     }
 
     private void loadImages(List<SearchableObject> similarImages, List<Double> imageToSearchFeatures)  {
@@ -169,7 +179,6 @@ public class LshUi {
         BufferedImage image = null;
 
         List<SearchableObject> sortedImages = getSortedResults(similarImages, imageToSearchFeatures);
-
         for (SearchableObject searchableObject : sortedImages) {
             if (imageCounter++ < numberOfImagesToShow) {
                 try {
@@ -298,6 +307,7 @@ public class LshUi {
                     JOptionPane.showMessageDialog(null, "Could not obtain image from URL.");
                 } else {
                     searchForImageInIndex(image);
+                    this.lastUrlSearchString = urlStringSuppliedByUser;
                     break;
                 }
             } catch (MalformedURLException e) {
@@ -322,8 +332,10 @@ public class LshUi {
                 if (image == null) {
                     JOptionPane.showMessageDialog(null, "Could not obtain image from URL.");
                 } else {
+                    this.lastButeForceSearchString = urlStringSuppliedByUser;
                     List<Double> imageFeatures = new FeatureFactory().imageHistogram(image);
-                    List<SearchableObject>  searchResults = getRawKNeaerestNeighbors(imageFeatures);
+                    List<SearchableObject> searchResults = getRawKNeaerestNeighbors(imageFeatures);
+                    this.lastBruteForceSearchResults = searchResults;
                     if (searchResults.size() == 0) {
                         JOptionPane.showMessageDialog(null, "No matches found.");
                     } else {
@@ -346,6 +358,7 @@ public class LshUi {
         List<Double> imageFeatures = new FeatureFactory().imageHistogram(imageToSearch);
         PerturbationSequences perturbationSequences = new PerturbationSequences(this.numberOfHashFunctions, this.slotWidth, this.nearestNeighborsToSearch);
         List<SearchableObject> kNearestNeighbors = getMultiProbeNearestNeighbors(imageFeatures, perturbationSequences.getPerturbations());
+        this.lastUrlSearchResults = kNearestNeighbors;
         if (kNearestNeighbors.size() == 0) {
             JOptionPane.showMessageDialog(null, "No matches found.");
         } else {
@@ -401,6 +414,39 @@ public class LshUi {
 
     }
 
+    private void displayMetricsDialog() {
+
+        if (this.lastUrlSearchString == null || this.lastButeForceSearchString == null || !this.lastUrlSearchString.trim().equals(this.lastButeForceSearchString.trim())) {
+            JOptionPane.showMessageDialog(null, "Last URL and Brute Force search queries do not match.");
+            return;
+        }
+
+        List<SearchableObject> tempBruteForceSearchResults = new ArrayList<SearchableObject>(this.lastBruteForceSearchResults);
+        tempBruteForceSearchResults.retainAll(this.lastUrlSearchResults);
+        double commonDocumentCount = tempBruteForceSearchResults.size();
+
+        StringBuffer metricsMessage = new StringBuffer();
+
+        metricsMessage.append("Relevant images count: " + this.lastBruteForceSearchResults.size() + "\n");
+        metricsMessage.append("Retrieved images count: " + this.lastUrlSearchResults.size() + "\n");
+
+        if (this.lastUrlSearchResults.size() > 0) {
+            double precision = commonDocumentCount / this.lastUrlSearchResults.size();
+            metricsMessage.append("Precision: " + precision + "\n");
+        } else {
+            metricsMessage.append("Precision could not be computed as URL search retrieved no images" + "\n");
+        }
+
+        if (this.lastBruteForceSearchResults.size() > 0) {
+            double recall = commonDocumentCount / this.lastBruteForceSearchResults.size();
+            metricsMessage.append("Recall: " + recall);
+        } else {
+            metricsMessage.append("Recall could not be computed as brute force search retrieved no images");
+        }
+
+        JOptionPane.showMessageDialog(null, metricsMessage.toString());
+
+    }
 
     // Return raw nearest neighbors without yet hashing
     private List<SearchableObject> getRawKNeaerestNeighbors(List<Double> vector)
@@ -413,7 +459,7 @@ public class LshUi {
             MAX_VECTOR.add(Double.MAX_VALUE);
 
         // Find K-Nearest Neighbors
-        for (int i = 0; i < this.nearestNeighborsToSearch; i++) {
+        for (int i = 0; i < this.DEFAULT_MAX_SEARCH_RESULTS_TO_DISPLAY; i++) {
             SearchableObject min_vector = new SearchableObject(MAX_VECTOR, null);
 
             SearchableObject queryObject = new SearchableObject(vector, null);

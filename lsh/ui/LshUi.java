@@ -1,6 +1,8 @@
 package ui;
 
 import images.FeatureFactory;
+import images.ImageDaemon;
+import images.SerializableHistogram;
 import indexing.ImageIndex;
 import indexing.SearchableObject;
 import querying.SearchableObjectComparator;
@@ -33,7 +35,7 @@ public class LshUi {
     public static final int DEFAULT_NUMBER_OF_HASHTABLES = 1;
     public static final int DEFAULT_NEAREST_NEIGHBORS_TO_SEARCH = 5;
     public static final int DEFAULT_MAX_SEARCH_RESULTS_TO_DISPLAY = 25;
-    public static final int DEFAULT_NUMBER_OF_DIMENSIONS = 180;
+    public static final int DEFAULT_NUMBER_OF_DIMENSIONS = 240;
     public static final double DEFAULT_SLOT_WIDTH = 1000000.0;
     public static final boolean DEFAULT_USE_EIGENVECTORS = false;
 
@@ -111,6 +113,9 @@ public class LshUi {
         JMenuItem loadIndexMenuItem = new JMenuItem("Load Index");
         loadIndexMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {loadIndex();} });
         fileMenu.add(loadIndexMenuItem);
+        JMenuItem loadIndexSavedFeaturesMenuItem = new JMenuItem("Load Index from Saved Features");
+        loadIndexSavedFeaturesMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {loadIndexSavedFeatures();} });
+        fileMenu.add(loadIndexSavedFeaturesMenuItem);
         JMenuItem exitMenuItem = new JMenuItem("Exit");
         exitMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {System.exit(0);} });
         fileMenu.add(exitMenuItem);
@@ -171,7 +176,7 @@ public class LshUi {
         this.lastBruteForceSearchResults = null;
     }
 
-    private void loadImages(List<SearchableObject> similarImages, List<Double> imageToSearchFeatures)  {
+    private void loadImages(List<SearchableObject> similarImages, SerializableHistogram imageToSearchFeatures)  {
 
         int imageCounter = 0, numberOfImagesToShow = Math.min(this.nearestNeighborsToSearch, similarImages.size());
         BufferedImage[] images = new BufferedImage[numberOfImagesToShow];
@@ -196,9 +201,9 @@ public class LshUi {
      * @param similarImages
      * @return
      */
-    private List<SearchableObject> getSortedResults(List<SearchableObject> similarImages, List<Double> imageToSearchFeatures) {
+    private List<SearchableObject> getSortedResults(List<SearchableObject> similarImages, SerializableHistogram imageToSearchFeatures) {
 
-        SearchableObjectComparator resultsComparator = new SearchableObjectComparator(new SearchableObject(imageToSearchFeatures, null));
+        SearchableObjectComparator resultsComparator = new SearchableObjectComparator(new SearchableObject(imageToSearchFeatures));
         Collections.sort(similarImages, resultsComparator);
         return similarImages;
 
@@ -232,6 +237,49 @@ public class LshUi {
 
         //Create the index and save it
         this.imageIndex = new ImageIndex(this.numberOfHashFunctions, this.numberOfHashTables, this.numberOfDimensions, this.slotWidth, this.useEigenVectorsForHashing, imageUrlsFile, false);
+        this.searchMenu.setEnabled(true);
+        this.settingsMenu.setEnabled(false);
+        try {
+
+            JFileChooser fileChooser = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+            fileChooser.setDialogTitle("Specify file to save index in:");
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+            returnValue = fileChooser.showSaveDialog(null);
+            if (returnValue == JFileChooser.APPROVE_OPTION) {
+                if (!fileChooser.getSelectedFile().isDirectory()) {
+                    FileOutputStream savedIndexFile = new FileOutputStream(fileChooser.getSelectedFile());
+                    ObjectOutputStream out = new ObjectOutputStream(savedIndexFile);
+                    out.writeObject(this.imageIndex);
+                    out.close();
+                    savedIndexFile.close();
+                }
+            }
+
+
+        } catch(IOException e) {
+            JOptionPane.showMessageDialog(null, "IOException was caught. Could not save index.");
+            System.out.println("IOException was caught. Could not save index.");
+        }
+
+    }
+
+    private void loadIndexSavedFeatures() {
+        File featuresFile = null;
+
+        JFileChooser jfc = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+        jfc.setDialogTitle("Select file containing saved features:");
+        jfc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+        int returnValue = jfc.showOpenDialog(null);
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            featuresFile = jfc.getSelectedFile();
+        } else {
+            return;
+        }
+
+        //Create the index and save it
+        this.imageIndex = new ImageIndex(this.numberOfHashFunctions, this.numberOfHashTables, this.numberOfDimensions, this.slotWidth, this.useEigenVectorsForHashing, featuresFile);
         this.searchMenu.setEnabled(true);
         this.settingsMenu.setEnabled(false);
         try {
@@ -327,14 +375,13 @@ public class LshUi {
             if (urlStringSuppliedByUser == null) {
                 break;
             }
-            try {
-                BufferedImage image = ImageIO.read(new URL(urlStringSuppliedByUser).openStream());
-                if (image == null) {
-                    JOptionPane.showMessageDialog(null, "Could not obtain image from URL.");
-                } else {
+//                 TODO better error handling needed
+//                if (image == null) {
+//                    JOptionPane.showMessageDialog(null, "Could not obtain image from URL.");
+//                } else {
                     this.lastButeForceSearchString = urlStringSuppliedByUser;
-                    List<Double> imageFeatures = new FeatureFactory().imageHistogram(image);
-                    List<SearchableObject> searchResults = getRawKNeaerestNeighbors(imageFeatures);
+                    SerializableHistogram imageFeatures = new FeatureFactory().imageHistogram(urlStringSuppliedByUser, urlStringSuppliedByUser);
+                    List<SearchableObject> searchResults = getRawKNeaerestNeighbors(imageFeatures.features);
                     this.lastBruteForceSearchResults = searchResults;
                     if (searchResults.size() == 0) {
                         JOptionPane.showMessageDialog(null, "No matches found.");
@@ -342,22 +389,16 @@ public class LshUi {
                         loadImages(searchResults, imageFeatures);
                     }
                     break;
-                }
-            } catch (MalformedURLException e) {
-                JOptionPane.showMessageDialog(null, "MalformedURLException was caught. Could not obtain image from URL.");
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(null, "IOException was caught. Could read in the image from URL.");
-            }
+//                }
         }
 
 
     }
 
     private void searchForImageInIndex(BufferedImage imageToSearch) {
-
-        List<Double> imageFeatures = new FeatureFactory().imageHistogram(imageToSearch);
+        SerializableHistogram imageFeatures = new FeatureFactory().imageHistogram(imageToSearch, null);
         PerturbationSequences perturbationSequences = new PerturbationSequences(this.numberOfHashFunctions, this.slotWidth, this.nearestNeighborsToSearch);
-        List<SearchableObject> kNearestNeighbors = getMultiProbeNearestNeighbors(imageFeatures, perturbationSequences.getPerturbations());
+        List<SearchableObject> kNearestNeighbors = getMultiProbeNearestNeighbors(imageFeatures.features, perturbationSequences.getPerturbations());
         this.lastUrlSearchResults = kNearestNeighbors;
         if (kNearestNeighbors.size() == 0) {
             JOptionPane.showMessageDialog(null, "No matches found.");
@@ -379,11 +420,7 @@ public class LshUi {
     // This removes them.
     private ArrayList<SearchableObject> removeDuplicates(List<SearchableObject> vector)
     {
-        Set<SearchableObject> hs = new HashSet<>();
-        hs.addAll(vector);
-        vector.clear();
-        vector.addAll(hs);
-        return new ArrayList(vector);
+       return new ArrayList<>(new HashSet<>(vector));
     }
 
     private void searchByImageFile() {
@@ -428,6 +465,7 @@ public class LshUi {
         StringBuffer metricsMessage = new StringBuffer();
 
         metricsMessage.append("Relevant images count: " + this.lastBruteForceSearchResults.size() + "\n");
+        // TODO: waht lastUrlSearchResults should not be terrible
         metricsMessage.append("Retrieved images count: " + this.lastUrlSearchResults.size() + "\n");
 
         if (this.lastUrlSearchResults.size() > 0) {
@@ -460,13 +498,14 @@ public class LshUi {
 
         // Find K-Nearest Neighbors
         for (int i = 0; i < this.DEFAULT_MAX_SEARCH_RESULTS_TO_DISPLAY; i++) {
-            SearchableObject min_vector = new SearchableObject(MAX_VECTOR, null);
+            SerializableHistogram fakeHistogram = new SerializableHistogram(MAX_VECTOR, null, null);
+            SearchableObject min_vector = new SearchableObject(fakeHistogram);
 
-            SearchableObject queryObject = new SearchableObject(vector, null);
+            SearchableObject queryObject = new SearchableObject(new SerializableHistogram(vector, null, null));
             for (SearchableObject object : data) {
                 if ((object.distanceTo(queryObject) < min_vector.distanceTo(queryObject)) &&
                         (!KNearestNeighbors.contains(object)))  {
-                    min_vector = new SearchableObject(object.getObjectFeatures(), object.getObjectUrl());
+                    min_vector = new SearchableObject(new SerializableHistogram(object.getObjectFeatures(), null, object.getObjectUrl().toString()));
                 }
             }
 
@@ -585,6 +624,12 @@ public class LshUi {
     }
 
     public static void main(String[] args) {
+//        if you need to collect more features change classes as appropriately
+//        ImageDaemon i = new ImageDaemon();
+//        i.collectImages();
+//        System.out.println("****** Daemon finished!");
+
+
         SwingUtilities.invokeLater(new Runnable(){
             @Override
             public void run() {
@@ -600,6 +645,7 @@ public class LshUi {
                 f.setVisible(true);
             }
         });
+
     }
 }
 

@@ -120,7 +120,7 @@ public class ImageIndex implements Serializable {
 			}
 
 			// Get Eigendecomposition
-			RealMatrix realM = new Array2DRowRealMatrix(M);
+			RealMatrix realM = new Array2DRowRealMatrix(M, false);
 			RealMatrix MtM = (realM.transpose()).multiply(realM);
 			EigenDecomposition VDV = new EigenDecomposition(MtM);
 			RealMatrix V = VDV.getV();
@@ -143,13 +143,13 @@ public class ImageIndex implements Serializable {
 				{
 					int a = randomNumberGenerator.nextInt(this.numberOfImageFeatures);
 					int b = randomNumberGenerator.nextInt(this.numberOfImageFeatures);
-					double c1 = randomNumberGenerator.nextGaussian();
-					double c2 = randomNumberGenerator.nextGaussian();
+					double c1 = randomNumberGenerator.nextDouble();
+					//double c2 = randomNumberGenerator.nextGaussian();
 
 					double linearCombination[] = new double[this.numberOfImageFeatures];
 
 					for (int j = 0; j < this.numberOfImageFeatures; j++)
-						linearCombination[j] = (c1 * eigenvectors[a][j])+ (c2 * eigenvectors[b][j]);
+						linearCombination[j] = (c1 * eigenvectors[a][j])+ ((1.0-c1) * eigenvectors[b][j]);
 
 					eigenvectors[i] = linearCombination;
 

@@ -64,8 +64,8 @@ public class PerturbationSequenceMapping {
             int hash_ndx = 0;
             for (int j = 0; j < 2 * this.numberOfHashFunctions; j += 2)
             {
-                hashedDistances[j] = new distances(hashes[hash_ndx].getSlotNumber(this.query) - 1, j + 1);
-                hashedDistances[j + 1] = new distances(hashes[hash_ndx].getSlotNumber(this.query) + 1, j + 2);
+                hashedDistances[j] = new distances(hashes[hash_ndx].getF(this.query) - hashes[hash_ndx].getSlotNumber(this.query)*this.slotWidth, j + 1, -1);
+                hashedDistances[j + 1] = new distances(this.slotWidth - hashes[hash_ndx].getF(this.query) + hashes[hash_ndx].getSlotNumber(this.query)*this.slotWidth, j + 2, 1);
                 hash_ndx++;
             }
 
@@ -79,22 +79,35 @@ public class PerturbationSequenceMapping {
             for (Perturbation perturbation : this.perturbations)
             {
                 List<Integer> indices = perturbation.getPerturbedVector();
-                distances temp_vec[] = new distances[indices.size()];
+//                distances temp_vec[] = new distances[indices.size()];
+//
+//                for (i = 0; i < indices.size(); i++)
+//                {
+//                    temp_vec[i] = (sortedDistances[indices.get(i) - 1]);
+//                }
+//                Arrays.sort(temp_vec, indexOrder);
+//
+//                for (distances index: temp_vec)
+//                {
+//                    if (index.getIndex() % 2 == 0) {
+//                        hashedQuery.set(index.getIndex()/2 - 1, hashedDistances[index.getIndex() - 1].getDistance());
+//                    }
+//                    else
+//                        hashedQuery.set(index.getIndex()/2, hashedDistances[index.getIndex() - 1].getDistance());
+//                }
 
-                for (i = 0; i < indices.size(); i++)
+                for (Integer index : indices)
                 {
-                    temp_vec[i] = (sortedDistances[indices.get(i) - 1]);
-                }
-                Arrays.sort(temp_vec, indexOrder);
-
-                for (distances index: temp_vec)
-                {
-                    if (index.getIndex() % 2 == 0) {
-                        hashedQuery.set(index.getIndex()/2 - 1, hashedDistances[index.getIndex() - 1].getDistance());
-                    }
+                    int ndx = sortedDistances[index.intValue()].getIndex();
+                    if (ndx % 2 == 0)
+                        ndx = ndx/2 - 1;
                     else
-                        hashedQuery.set(index.getIndex()/2, hashedDistances[index.getIndex() - 1].getDistance());
+                        ndx = ndx/2;
+                    int delta = sortedDistances[index.intValue()].getDelta();
+
+                    hashedQuery.set(ndx, hashedQuery.get(ndx) + delta);
                 }
+
                 returnSet.addAll(hashtable.getObjects(new HashBucket(hashedQuery)));
             }
 
@@ -109,12 +122,14 @@ public class PerturbationSequenceMapping {
 
     private class distances implements Comparable<distances> {
 
-        private int distance;
+        private double distance;
         private int index;
+        private int delta;
 
-        public distances(int distance, int index) {
+        public distances(double distance, int index, int delta) {
             this.distance = distance;
             this.index = index;
+            this.delta = delta;
         }
 
         @Override
@@ -122,13 +137,15 @@ public class PerturbationSequenceMapping {
             return Double.valueOf(this.distance).compareTo(Double.valueOf(other.distance));
         }
 
-        public int getDistance() {
+        public double getDistance() {
             return this.distance;
         }
 
         public int getIndex() {
             return this.index;
         }
+
+        public int getDelta() {return this.delta; }
 
     }
 

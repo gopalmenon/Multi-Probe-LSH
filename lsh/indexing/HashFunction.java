@@ -67,5 +67,19 @@ public class HashFunction implements Serializable {
 		return Double.valueOf(Math.floor(innerProduct / this.slotWidthW)).intValue();
 		
 	}
+
+	public double getF(List<Double> objectFeatures)
+	{
+		assert objectFeatures.size() == this.hashFunctionCoefficients.size() :
+				"Size mismatch between object to be hashed and hash function";
+
+		double innerProduct = 0.0;
+		for (int dimensionCounter = 0; dimensionCounter < numberOfDimensions; ++dimensionCounter) {
+			innerProduct += objectFeatures.get(dimensionCounter) * this.hashFunctionCoefficients.get(dimensionCounter);
+		}
+
+		innerProduct += this.offset;
+		return innerProduct;
+	}
 	
 }

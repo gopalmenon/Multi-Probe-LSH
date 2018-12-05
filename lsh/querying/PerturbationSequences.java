@@ -21,7 +21,7 @@ public class PerturbationSequences {
     }
 
     private double addPerturbationScore(double perturbedComponent) {
-        if (perturbedComponent >= 0 && perturbedComponent <= this.numberOfHashFunctions) {
+        if (perturbedComponent >= 1 && perturbedComponent <= this.numberOfHashFunctions) {
             return (perturbedComponent* (perturbedComponent + 1))*(this.slotWidth * this.slotWidth) /
                    (4 * ((double)this.numberOfHashFunctions + 1) * ((double)this.numberOfHashFunctions + 2));
 

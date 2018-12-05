@@ -124,6 +124,7 @@ public class ImageIndex implements Serializable {
 			RealMatrix MtM = (realM.transpose()).multiply(realM);
 			EigenDecomposition VDV = new EigenDecomposition(MtM);
 			RealMatrix V = VDV.getV();
+			V = V.scalarMultiply(15.5);
 
 			int ML = this.numberOfHashFunctions * this.numberOfHashTables;
 			double eigenvectors[][] = new double[Math.max(this.numberOfImageFeatures, ML)][this.numberOfImageFeatures];

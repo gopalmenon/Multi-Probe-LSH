@@ -116,7 +116,7 @@ public class LshUi {
         JMenuItem loadIndexMenuItem = new JMenuItem("Load Index");
         loadIndexMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {loadIndex();} });
         fileMenu.add(loadIndexMenuItem);
-        JMenuItem loadIndexSavedFeaturesMenuItem = new JMenuItem("Load Index from Saved Features");
+        JMenuItem loadIndexSavedFeaturesMenuItem = new JMenuItem("Build Index from Saved Features");
         loadIndexSavedFeaturesMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {loadIndexSavedFeatures();} });
         fileMenu.add(loadIndexSavedFeaturesMenuItem);
         JMenuItem exitMenuItem = new JMenuItem("Exit");
@@ -334,6 +334,7 @@ public class LshUi {
             FileInputStream savedIndexFile = new FileInputStream(imageIndexFile);
             ObjectInputStream in = new ObjectInputStream(savedIndexFile);
             this.imageIndex = (ImageIndex)in.readObject();
+            setUserSelections(this.imageIndex);
             in.close();
             savedIndexFile.close();
             this.searchMenu.setEnabled(true);
@@ -677,6 +678,15 @@ public class LshUi {
         });
 
     }
+
+
+    private void setUserSelections(ImageIndex loadedIndex) {
+        this.numberOfHashFunctions = loadedIndex.getNumberOfHashFunctions();
+        this.numberOfHashTables = loadedIndex.getNumberOfHashTables();
+        this.numberOfDimensions = loadedIndex.getNumberOfImageFeatures();
+        this.useEigenVectorsForHashing = loadedIndex.isUseEigenVectorsToHash();
+        this.slotWidth = loadedIndex.getSlotWidth();
+    }
 }
 
 class IconCellRenderer extends DefaultListCellRenderer {
@@ -718,6 +728,7 @@ class IconCellRenderer extends DefaultListCellRenderer {
         }
         return c;
     }
+
 
     @Override
     public Dimension getPreferredSize() {

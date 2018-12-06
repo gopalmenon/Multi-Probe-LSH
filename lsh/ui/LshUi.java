@@ -38,6 +38,7 @@ public class LshUi {
     public static final int DEFAULT_NUMBER_OF_DIMENSIONS = 240;
     public static final double DEFAULT_SLOT_WIDTH = 400.0;
     public static final boolean DEFAULT_USE_EIGENVECTORS = false;
+    public static final int DEFAULT_NUMBER_OF_PERTURBATIONS = 25;
 
     private int numberOfHashFunctions, numberOfHashTables, numberOfDimensions, nearestNeighborsToSearch;
     private double slotWidth;
@@ -51,6 +52,7 @@ public class LshUi {
     private DefaultListModel model;
     private String lastUrlSearchString, lastButeForceSearchString;
     private List<SearchableObject> lastUrlSearchResults, lastBruteForceSearchResults;
+    private int numberOfPerturbations;
 
     LshUi() {
         // otherwise http read timeouts take forever
@@ -63,6 +65,7 @@ public class LshUi {
         this.slotWidth = DEFAULT_SLOT_WIDTH;
         this.useEigenVectorsForHashing = DEFAULT_USE_EIGENVECTORS;
         this.nearestNeighborsToSearch = DEFAULT_NEAREST_NEIGHBORS_TO_SEARCH;
+        this.numberOfPerturbations = DEFAULT_NUMBER_OF_PERTURBATIONS;
 
         gui = new JPanel(new GridLayout());
 
@@ -113,7 +116,7 @@ public class LshUi {
         JMenuItem loadIndexMenuItem = new JMenuItem("Load Index");
         loadIndexMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {loadIndex();} });
         fileMenu.add(loadIndexMenuItem);
-        JMenuItem loadIndexSavedFeaturesMenuItem = new JMenuItem("Load Index from Saved Features");
+        JMenuItem loadIndexSavedFeaturesMenuItem = new JMenuItem("Build Index from Saved Features");
         loadIndexSavedFeaturesMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {loadIndexSavedFeatures();} });
         fileMenu.add(loadIndexSavedFeaturesMenuItem);
         JMenuItem exitMenuItem = new JMenuItem("Exit");
@@ -132,6 +135,9 @@ public class LshUi {
         JMenuItem bruteForceSearchByUrlMenuItem = new JMenuItem("Brute Force Search  by URL");
         bruteForceSearchByUrlMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {bruteForceSearchByUrl();} });
         searchMenu.add(bruteForceSearchByUrlMenuItem);
+        JMenuItem setPerturbationCountMenuItem = new JMenuItem("Set Perturbation Count");
+        setPerturbationCountMenuItem.addActionListener(new ActionListener() {public void actionPerformed(ActionEvent e) {setPerturbationCount();} });
+        searchMenu.add(setPerturbationCountMenuItem);
         menuBar.add(searchMenu);
         searchMenu.setEnabled(false);
 
@@ -344,6 +350,7 @@ public class LshUi {
             FileInputStream savedIndexFile = new FileInputStream(imageIndexFile);
             ObjectInputStream in = new ObjectInputStream(savedIndexFile);
             this.imageIndex = (ImageIndex)in.readObject();
+            setUserSelections(this.imageIndex);
             in.close();
             savedIndexFile.close();
             this.searchMenu.setEnabled(true);
@@ -494,9 +501,9 @@ public class LshUi {
 
         StringBuffer metricsMessage = new StringBuffer();
 
-        metricsMessage.append("Relevant images count: " + this.lastBruteForceSearchResults.size() + "\n");
+        metricsMessage.append("Relevant (Brute Force Search) images count: " + this.lastBruteForceSearchResults.size() + "\n");
         // TODO: waht lastUrlSearchResults should not be terrible
-        metricsMessage.append("Retrieved images count: " + this.lastUrlSearchResults.size() + "\n");
+        metricsMessage.append("Retrieved (LSH Search) images count: " + this.lastUrlSearchResults.size() + "\n");
 
         if (this.lastUrlSearchResults.size() > 0) {
             double precision = commonDocumentCount / this.lastUrlSearchResults.size();
@@ -542,6 +549,30 @@ public class LshUi {
             KNearestNeighbors.add(min_vector);
         }
         return removeDuplicates(KNearestNeighbors);
+
+    }
+
+    /**
+     * Ask user for number of perturbations
+     */
+    private void setPerturbationCount() {
+
+        int numberOfPerturbations = 0;
+        String numberOfPerturbationsString = null;
+        while(true) {
+            numberOfPerturbationsString = JOptionPane.showInputDialog("Number of Perturbations: ", this.numberOfPerturbations);
+            if (numberOfPerturbationsString == null) {
+                break;
+            }
+            try {
+                numberOfPerturbations = Integer.parseInt(numberOfPerturbationsString);
+                this.numberOfPerturbations = numberOfPerturbations;
+                break;
+            } catch (NumberFormatException e) {
+
+            }
+
+        }
 
     }
 
@@ -677,6 +708,15 @@ public class LshUi {
         });
 
     }
+
+
+    private void setUserSelections(ImageIndex loadedIndex) {
+        this.numberOfHashFunctions = loadedIndex.getNumberOfHashFunctions();
+        this.numberOfHashTables = loadedIndex.getNumberOfHashTables();
+        this.numberOfDimensions = loadedIndex.getNumberOfImageFeatures();
+        this.useEigenVectorsForHashing = loadedIndex.isUseEigenVectorsToHash();
+        this.slotWidth = loadedIndex.getSlotWidth();
+    }
 }
 
 class IconCellRenderer extends DefaultListCellRenderer {
@@ -718,6 +758,7 @@ class IconCellRenderer extends DefaultListCellRenderer {
         }
         return c;
     }
+
 
     @Override
     public Dimension getPreferredSize() {

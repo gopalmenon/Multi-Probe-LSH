@@ -285,4 +285,24 @@ public class ImageIndex implements Serializable {
 	public void putRawFeatureVectors(SearchableObject obj) {
 		this.rawFeatureVectors.add(obj);
 	}
+
+	public int getNumberOfHashFunctions() {
+		return this.numberOfHashFunctions;
+	}
+
+	public int getNumberOfHashTables() {
+		return this.numberOfHashTables;
+	}
+
+	public int getNumberOfImageFeatures() {
+		return this.numberOfImageFeatures;
+	}
+
+	public double getSlotWidth() {
+		return this.slotWidth;
+	}
+
+	public boolean isUseEigenVectorsToHash() {
+		return this.useEigenVectorsToHash;
+	}
 }

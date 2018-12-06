@@ -20,6 +20,18 @@ dependencies {
     compile 'com.opencsv:opencsv:4.4'
 }
 
+buildscript {
+    repositories {
+       jcenter()
+    }
+    dependencies {
+        // https://plugins.gradle.org/plugin/com.github.johnrengelman.shadow
+        classpath "com.github.jengelman.gradle.plugins:shadow:4.0.3"
+    }
+}
+
+apply plugin: "com.github.johnrengelman.shadow"
+
 sourceSets {
     main {
         java {

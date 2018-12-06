@@ -33,10 +33,10 @@ public class LshUi {
 
     public static final int DEFAULT_NUMBER_OF_HASHFUNCTIONS = 4;
     public static final int DEFAULT_NUMBER_OF_HASHTABLES = 1;
-    public static final int DEFAULT_NEAREST_NEIGHBORS_TO_SEARCH = 5;
+    public static final int DEFAULT_NEAREST_NEIGHBORS_TO_SEARCH = 20;
     public static final int DEFAULT_MAX_SEARCH_RESULTS_TO_DISPLAY = 25;
     public static final int DEFAULT_NUMBER_OF_DIMENSIONS = 240;
-    public static final double DEFAULT_SLOT_WIDTH = 1000000.0;
+    public static final double DEFAULT_SLOT_WIDTH = 400.0;
     public static final boolean DEFAULT_USE_EIGENVECTORS = false;
     public static final int DEFAULT_NUMBER_OF_PERTURBATIONS = 25;
 
@@ -214,6 +214,22 @@ public class LshUi {
         return similarImages;
 
     }
+
+
+    /**
+     * Sort the query result by increasing distance from query object
+     * @param similarImages
+     * @return
+     */
+    private List<SearchableObject> getSortedResults(List<SearchableObject> similarImages, List<Double> query) {
+
+        SearchableObjectComparator resultsComparator = new SearchableObjectComparator(new SearchableObject(query));
+        Collections.sort(similarImages, resultsComparator);
+        return similarImages;
+
+    }
+
+
 
     public Container getGui() {
         return gui;
@@ -404,8 +420,20 @@ public class LshUi {
 
     private void searchForImageInIndex(BufferedImage imageToSearch) {
         SerializableHistogram imageFeatures = new FeatureFactory().imageHistogram(imageToSearch, null);
-        PerturbationSequences perturbationSequences = new PerturbationSequences(this.numberOfHashFunctions, this.slotWidth, this.numberOfPerturbations);
-        List<SearchableObject> kNearestNeighbors = getMultiProbeNearestNeighbors(imageFeatures.features, perturbationSequences.getPerturbations());
+        PerturbationSequences perturbationSequences = new PerturbationSequences(this.numberOfHashFunctions, this.slotWidth, this.nearestNeighborsToSearch);
+        List<SearchableObject> NearestNeighbors = getMultiProbeNearestNeighbors(imageFeatures.features, perturbationSequences.getPerturbations());
+        // Sort the results
+        NearestNeighbors = getSortedResults(NearestNeighbors, imageFeatures.features);
+        System.out.println("Found " + NearestNeighbors.size() + " after removing duplicates.");
+
+        // Get top K results
+        List<SearchableObject> kNearestNeighbors = new ArrayList<>();
+        int max_ndx = Math.min(this.nearestNeighborsToSearch, NearestNeighbors.size());
+        for (int i = 0; i < max_ndx; i++)
+        {
+            kNearestNeighbors.add(NearestNeighbors.get(i));
+        }
+
         this.lastUrlSearchResults = kNearestNeighbors;
         if (kNearestNeighbors.size() == 0) {
             JOptionPane.showMessageDialog(null, "No matches found.");
@@ -420,14 +448,16 @@ public class LshUi {
     {
         PerturbationSequenceMapping runMultiProbe = new PerturbationSequenceMapping(this.numberOfHashFunctions, this.slotWidth, this.nearestNeighborsToSearch, this.numberOfHashTables, this.imageIndex.getImageIndex(), queryVector, perturbations);
         return removeDuplicates(runMultiProbe.getQueryResults());
+
     }
 
 
     // Due to the existence of multiple hashtables, we originally get many duplicates.
-    // This removes them.
+    // This removes them. Also, sort and return the first K.
     private ArrayList<SearchableObject> removeDuplicates(List<SearchableObject> vector)
     {
-       return new ArrayList<>(new HashSet<>(vector));
+        System.out.println("Found " + vector.size() + " results. Removing duplicates.");
+        return new ArrayList<>(new HashSet<>(vector));
     }
 
     private void searchByImageFile() {

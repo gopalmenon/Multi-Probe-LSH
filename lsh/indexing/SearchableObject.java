@@ -25,6 +25,12 @@ public class SearchableObject implements Serializable{
 			// idk
 		}
 	}
+
+	public SearchableObject(List<Double> v)
+	{
+		this.objectFeatures = v;
+		this.objectUrl = null;
+	}
 	
 
 	public List<Double> getObjectFeatures() {

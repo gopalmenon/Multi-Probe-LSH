@@ -23,15 +23,24 @@ public class HashBucket implements Serializable {
 	}
 	
 	private int computeHashCode() {
-		
-		int hashCode = 0, binaryMultiplier = 1;
+
+//		int seed = this.objectHashBucket.size();
+//		for (int i = 0; i < this.objectHashBucket.size(); i++)
+//			seed += this.objectHashBucket.get(i);
+//		for (int i = 0; i < this.objectHashBucket.size(); i++)
+//		{
+//			seed ^= this.objectHashBucket.get(i) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+//		}
+//		return seed;
+
+		double hashCode = 0.0;
+		int binaryMultiplier = 1;
 		for (int slotCounter = 0; slotCounter < this.objectHashBucket.size(); ++ slotCounter) {
-			hashCode += this.objectHashBucket.get(slotCounter).intValue() * binaryMultiplier;
-			binaryMultiplier *= 2;
+			hashCode += this.objectHashBucket.get(slotCounter) * binaryMultiplier;
+			binaryMultiplier *= 8;
 		}
-		
-		return hashCode;
-		
+		return (int)hashCode;
+
 	}
 	
 	/* (non-Javadoc)
